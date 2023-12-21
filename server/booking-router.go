@@ -535,6 +535,12 @@ func (router *BookingRouter) isValidMaxUpcomingBookings(orgID string, userID str
 	return len(curUpcoming) < maxUpcoming
 }
 
+func (router *BookingRouter) isValidMaxConcurrentBookingsForUser(orgID string, userID string, m *BookingRequest) bool {
+	maxConcurrent, _ := GetSettingsRepository().GetInt(orgID, SettingMaxConcurrentBookingsPerUser.Name)
+	curAtTime, _ := GetBookingRepository().GetTimeRangeByUser(userID, m.Enter, m.Leave)
+	return len(curAtTime) < maxConcurrent
+}
+
 func (router *BookingRouter) isValidBookingRequest(m *BookingRequest, userID string, orgID string, isUpdate bool) (bool, int) {
 	if !router.isValidBookingDuration(m, orgID) {
 		return false, ResponseCodeBookingInvalidBookingDuration
@@ -545,6 +551,9 @@ func (router *BookingRouter) isValidBookingRequest(m *BookingRequest, userID str
 	if !isUpdate {
 		if !router.isValidMaxUpcomingBookings(orgID, userID) {
 			return false, ResponseCodeBookingTooManyUpcomingBookings
+		}
+		if !router.isValidMaxConcurrentBookingsForUser(orgID, userID, m) {
+			return false, ResponseCodeBookingMaxConcurrentForUser
 		}
 	}
 	return true, 0
