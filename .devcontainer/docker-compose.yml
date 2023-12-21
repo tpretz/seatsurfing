@@ -1,0 +1,31 @@
+version: '3.7'
+
+services:
+  dev:
+    image: golang:1.21-bookworm
+    restart: always
+    networks:
+      http:
+    ports:
+      - 8080:8080
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    volumes:
+      - ..:/workspace:cached
+    depends_on:
+      - db
+    environment:
+      POSTGRES_URL: 'postgres://seatsurfing:DB_PASSWORD@db/seatsurfing?sslmode=disable'
+      JWT_SIGNING_KEY: 'some_random_string'
+      BOOKING_UI_BACKEND: 'booking-ui:3001'
+      ADMIN_UI_BACKEND: 'admin-ui:3000'
+  db:
+    image: postgres:15-alpine
+    restart: always
+    networks:
+      http:
+    environment:
+      POSTGRES_PASSWORD: DB_PASSWORD
+      POSTGRES_USER: seatsurfing
+      POSTGRES_DB: seatsurfing
+networks:
+  http:
