@@ -222,17 +222,17 @@ func (r *BookingRepository) GetLoad(organizationID string, enter, leave time.Tim
 }
 
 // get all bookings by a specific user which overlap with the provided time range
-func (r *BookingRepository) GetTimeRangeByUser(userID string, enter time.Time, leave time.Time) ([]*Booking, error) {
+func (r *BookingRepository) GetTimeRangeByUser(userID string, enter time.Time, leave time.Time, excludeBookingID string) ([]*Booking, error) {
 	var result []*Booking
 	rows, err := GetDatabase().DB().Query("SELECT id, user_id, space_id, enter_time, leave_time "+
 		"FROM bookings "+
-		"WHERE user_id = $1 AND ("+
+		"WHERE id::text != $4 AND user_id = $1 AND ("+
 		"($2 BETWEEN enter_time AND leave_time) OR "+
 		"($3 BETWEEN enter_time AND leave_time) OR "+
 		"(enter_time BETWEEN $2 AND $3) OR "+
 		"(leave_time BETWEEN $2 AND $3)"+
 		") "+
-		"ORDER BY enter_time", userID, enter, leave)
+		"ORDER BY enter_time", userID, enter, leave, excludeBookingID)
 	if err != nil {
 		return nil, err
 	}
