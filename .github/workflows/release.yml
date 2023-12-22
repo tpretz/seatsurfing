@@ -30,7 +30,8 @@ jobs:
       - name: Build and push (ui)
         uses: docker/build-push-action@v4
         with:
-          context: ./booking-ui
+          context: .
+          file: Dockerfile.ui
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta-ui.outputs.tags }}
@@ -43,7 +44,8 @@ jobs:
       - name: Build and push (admin)
         uses: docker/build-push-action@v4
         with:
-          context: ./admin-ui
+          context: .
+          file: Dockerfile.admin
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta-admin.outputs.tags }}
