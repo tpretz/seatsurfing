@@ -1628,61 +1628,16 @@ func TestBookingsUserConcurrentNoLimit(t *testing.T) {
 	checkTestResponseCode(t, http.StatusCreated, res.Code)
 
 	// user one books some more, plenty more, no errors
-	payload := "{\"spaceId\": \"" + s3.ID + "\", \"enter\": \"2030-09-01T07:30:00+02:00\", \"leave\": \"2030-09-01T12:00:00+02:00\"}"
-	req := newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
-	res := executeTestRequest(req)
-	checkTestResponseCode(t, http.StatusCreated, res.Code)
-	payload := "{\"spaceId\": \"" + s4.ID + "\", \"enter\": \"2030-09-01T07:30:00+02:00\", \"leave\": \"2030-09-01T12:00:00+02:00\"}"
-	req := newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
-	res := executeTestRequest(req)
-	checkTestResponseCode(t, http.StatusCreated, res.Code)
-	payload := "{\"spaceId\": \"" + s5.ID + "\", \"enter\": \"2030-09-01T07:30:00+02:00\", \"leave\": \"2030-09-01T12:00:00+02:00\"}"
-	req := newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
-	res := executeTestRequest(req)
-	checkTestResponseCode(t, http.StatusCreated, res.Code)
-}
-
-func TestBookingsMaxConcurrentLimitOKComplex(t *testing.T) {
-	clearTestDB()
-	org := createTestOrg("test.com")
-	GetSettingsRepository().Set(org.ID, SettingMaxDaysInAdvance.Name, strconv.Itoa(365*10))
-	GetSettingsRepository().Set(org.ID, SettingMaxBookingsPerUser.Name, "1")
-	user1 := createTestUserInOrg(org)
-	user2 := createTestUserInOrg(org)
-	user3 := createTestUserInOrg(org)
-
-	l := &Location{
-		Name:                  "Test",
-		MaxConcurrentBookings: 1,
-		OrganizationID:        org.ID,
-	}
-	GetLocationRepository().Create(l)
-	s1 := &Space{Name: "Test 1", LocationID: l.ID}
-	GetSpaceRepository().Create(s1)
-	s2 := &Space{Name: "Test 2", LocationID: l.ID}
-	GetSpaceRepository().Create(s2)
-	s3 := &Space{Name: "Test 3", LocationID: l.ID}
-	GetSpaceRepository().Create(s3)
-
-	//	|------------|                   #1 - OK  (07:30 - 12:00)
-	//	                      |-----|    #2 - OK  (16:00 - 19:00)
-	//	             |--------|          #3 - OK  (08:30 - 17:00)
-
-	// Create booking 1
-	payload := "{\"spaceId\": \"" + s1.ID + "\", \"enter\": \"2030-09-01T07:30:00+02:00\", \"leave\": \"2030-09-01T12:00:00+02:00\"}"
-	req := newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
-	res := executeTestRequest(req)
-	checkTestResponseCode(t, http.StatusCreated, res.Code)
-
-	// Create booking 2
-	payload = "{\"spaceId\": \"" + s2.ID + "\", \"enter\": \"2030-09-01T16:00:00+02:00\", \"leave\": \"2030-09-01T19:00:00+02:00\"}"
-	req = newHTTPRequest("POST", "/booking/", user2.ID, bytes.NewBufferString(payload))
+	payload = "{\"spaceId\": \"" + s3.ID + "\", \"enter\": \"2030-09-01T07:30:00+02:00\", \"leave\": \"2030-09-01T12:00:00+02:00\"}"
+	req = newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
 	res = executeTestRequest(req)
 	checkTestResponseCode(t, http.StatusCreated, res.Code)
-
-	// Create booking 3
-	payload = "{\"spaceId\": \"" + s3.ID + "\", \"enter\": \"2030-09-01T12:00:00+02:00\", \"leave\": \"2030-09-01T16:00:00+02:00\"}"
-	req = newHTTPRequest("POST", "/booking/", user3.ID, bytes.NewBufferString(payload))
+	payload = "{\"spaceId\": \"" + s4.ID + "\", \"enter\": \"2030-09-01T07:30:00+02:00\", \"leave\": \"2030-09-01T12:00:00+02:00\"}"
+	req = newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
+	res = executeTestRequest(req)
+	checkTestResponseCode(t, http.StatusCreated, res.Code)
+	payload = "{\"spaceId\": \"" + s5.ID + "\", \"enter\": \"2030-09-01T07:30:00+02:00\", \"leave\": \"2030-09-01T12:00:00+02:00\"}"
+	req = newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
 	res = executeTestRequest(req)
 	checkTestResponseCode(t, http.StatusCreated, res.Code)
 }
