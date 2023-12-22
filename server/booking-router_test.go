@@ -1582,12 +1582,12 @@ func TestBookingsPresenceReport(t *testing.T) {
 	checkTestInt(t, 0, resBody.Presences[2][7])
 }
 
-func TestBookingsUserConcurrentWithinLimit(t *testing.T) {
+func TestBookingsUserConcurrentOk(t *testing.T) {
 	clearTestDB()
 	org := createTestOrg("test.com")
 	GetSettingsRepository().Set(org.ID, SettingMaxDaysInAdvance.Name, strconv.Itoa(365*10))
 	GetSettingsRepository().Set(org.ID, SettingMaxBookingsPerUser.Name, "50")
-	GetSettingsRepository().Set(org.ID, SettingMaxConcurrentBookingsPerUser.Name, "2")
+	GetSettingsRepository().Set(org.ID, SettingMaxConcurrentBookingsPerUser.Name, "1")
 	user1 := createTestUserInOrg(org)
 	user2 := createTestUserInOrg(org)
 
@@ -1622,14 +1622,20 @@ func TestBookingsUserConcurrentWithinLimit(t *testing.T) {
 	res = executeTestRequest(req)
 	checkTestResponseCode(t, http.StatusCreated, res.Code)
 
-	// user one books another with overlap
-	payload = "{\"spaceId\": \"" + s3.ID + "\", \"enter\": \"2030-09-01T11:30:00+02:00\", \"leave\": \"2030-09-01T15:00:00+02:00\"}"
+	// user one books another away from first
+	payload = "{\"spaceId\": \"" + s4.ID + "\", \"enter\": \"2030-09-01T20:00:00+02:00\", \"leave\": \"2030-09-01T20:25:00+02:00\"}"
 	req = newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
 	res = executeTestRequest(req)
 	checkTestResponseCode(t, http.StatusCreated, res.Code)
 
-	// user one books another with different overlap
-	payload = "{\"spaceId\": \"" + s4.ID + "\", \"enter\": \"2030-09-01T08:00:00+02:00\", \"leave\": \"2030-09-01T11:25:00+02:00\"}"
+	// user one books another with start as another ends, this should be ok
+	payload = "{\"spaceId\": \"" + s4.ID + "\", \"enter\": \"2030-09-01T12:00:00+02:00\", \"leave\": \"2030-09-01T15:25:00+02:00\"}"
+	req = newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
+	res = executeTestRequest(req)
+	checkTestResponseCode(t, http.StatusCreated, res.Code)
+
+	// user one books another bordering with start time, this should be ok
+	payload = "{\"spaceId\": \"" + s5.ID + "\", \"enter\": \"2030-09-01T05:00:00+02:00\", \"leave\": \"2030-09-01T07:30:00+02:00\"}"
 	req = newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
 	res = executeTestRequest(req)
 	checkTestResponseCode(t, http.StatusCreated, res.Code)
@@ -1681,8 +1687,26 @@ func TestBookingsUserConcurrentExceedLimit(t *testing.T) {
 	res = executeTestRequest(req)
 	checkTestResponseCode(t, http.StatusCreated, res.Code)
 
-	// user one books another with the same overlap and should fail as already two booked
+	// border start
+	payload = "{\"spaceId\": \"" + s4.ID + "\", \"enter\": \"2030-09-01T06:00:00+02:00\", \"leave\": \"2030-09-01T11:40:00+02:00\"}"
+	req = newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
+	res = executeTestRequest(req)
+	checkTestResponseCode(t, http.StatusBadRequest, res.Code)
+
+	// border end
 	payload = "{\"spaceId\": \"" + s4.ID + "\", \"enter\": \"2030-09-01T11:50:00+02:00\", \"leave\": \"2030-09-01T14:00:00+02:00\"}"
+	req = newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
+	res = executeTestRequest(req)
+	checkTestResponseCode(t, http.StatusBadRequest, res.Code)
+
+	// surround
+	payload = "{\"spaceId\": \"" + s4.ID + "\", \"enter\": \"2030-09-01T06:00:00+02:00\", \"leave\": \"2030-09-01T13:00:00+02:00\"}"
+	req = newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
+	res = executeTestRequest(req)
+	checkTestResponseCode(t, http.StatusBadRequest, res.Code)
+
+	// within
+	payload = "{\"spaceId\": \"" + s4.ID + "\", \"enter\": \"2030-09-01T09:00:00+02:00\", \"leave\": \"2030-09-01T11:31:00+02:00\"}"
 	req = newHTTPRequest("POST", "/booking/", user1.ID, bytes.NewBufferString(payload))
 	res = executeTestRequest(req)
 	checkTestResponseCode(t, http.StatusBadRequest, res.Code)
