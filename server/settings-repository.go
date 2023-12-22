@@ -187,6 +187,7 @@ func (r *SettingsRepository) InitDefaultSettingsForOrg(organizationID string) er
 		"($1, '"+SettingConfluenceServerSharedSecret.Name+"', ''), "+
 		"($1, '"+SettingConfluenceAnonymous.Name+"', '0'), "+
 		"($1, '"+SettingMaxBookingsPerUser.Name+"', '10'), "+
+		"($1, '"+SettingMaxConcurrentBookingsPerUser.Name+"', '0'), "+
 		"($1, '"+SettingMaxDaysInAdvance.Name+"', '14'), "+
 		"($1, '"+SettingMaxBookingDurationHours.Name+"', '12'), "+
 		"($1, '"+SettingDefaultTimezone.Name+"', 'Europe/Berlin') "+
