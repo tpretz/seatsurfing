@@ -61,6 +61,7 @@ func TestSettingsReadPublic(t *testing.T) {
 		SettingActiveSubscription.Name,
 		SettingSubscriptionMaxUsers.Name,
 		SettingSubscriptionMaxGroups.Name,
+		SettingGroupCreateOnDiscover.Name,
 	}
 
 	for _, name := range allowedSettings {
@@ -112,6 +113,7 @@ func TestSettingsReadAdmin(t *testing.T) {
 		SettingActiveSubscription.Name,
 		SettingSubscriptionMaxUsers.Name,
 		SettingSubscriptionMaxGroups.Name,
+		SettingGroupCreateOnDiscover.Name,
 		SettingDefaultTimezone.Name,
 		SysSettingOrgSignupDelete,
 		SysSettingVersion,

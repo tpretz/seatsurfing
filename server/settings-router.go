@@ -200,6 +200,7 @@ func (router *SettingsRouter) isValidSettingNameReadAdmin(name string) bool {
 		name == SettingActiveSubscription.Name ||
 		name == SettingSubscriptionMaxUsers.Name ||
 		name == SettingSubscriptionMaxGroups.Name ||
+		name == SettingGroupCreateOnDiscover.Name ||
 		name == SettingConfluenceServerSharedSecret.Name ||
 		name == SettingConfluenceAnonymous.Name ||
 		name == SysSettingOrgSignupDelete {
@@ -219,6 +220,7 @@ func (router *SettingsRouter) isValidSettingNameWrite(name string) bool {
 		name == SettingShowNames.Name ||
 		name == SettingAllowBookingsNonExistingUsers.Name ||
 		name == SettingMaxBookingDurationHours.Name ||
+		name == SettingGroupCreateOnDiscover.Name ||
 		name == SettingDefaultTimezone.Name {
 		return true
 	}
@@ -243,6 +245,9 @@ func (router *SettingsRouter) getSettingType(name string) SettingType {
 	}
 	if name == SettingMaxDaysInAdvance.Name {
 		return SettingMaxDaysInAdvance.Type
+	}
+	if name == SettingGroupCreateOnDiscover.Name {
+		return SettingGroupCreateOnDiscover.Type
 	}
 	if name == SettingMaxBookingDurationHours.Name {
 		return SettingMaxBookingDurationHours.Type

@@ -45,6 +45,7 @@ var (
 	SettingSubscriptionMaxUsers          SettingName = SettingName{Name: "subscription_max_users", Type: SettingTypeInt}
 	SettingSubscriptionMaxGroups         SettingName = SettingName{Name: "subscription_max_groups", Type: SettingTypeInt}
 	SettingDefaultTimezone               SettingName = SettingName{Name: "default_timezone", Type: SettingTypeString}
+	SettingGroupCreateOnDiscover         SettingName = SettingName{Name: "group_create_on_discover", Type: SettingTypeBool}
 )
 
 var settingsRepository *SettingsRepository
@@ -192,7 +193,8 @@ func (r *SettingsRepository) InitDefaultSettingsForOrg(organizationID string) er
 		"($1, '"+SettingMaxConcurrentBookingsPerUser.Name+"', '0'), "+
 		"($1, '"+SettingMaxDaysInAdvance.Name+"', '14'), "+
 		"($1, '"+SettingMaxBookingDurationHours.Name+"', '12'), "+
-		"($1, '"+SettingDefaultTimezone.Name+"', 'Europe/Berlin') "+
+		"($1, '"+SettingDefaultTimezone.Name+"', 'Europe/Berlin'), "+
+		"($1, '"+SettingGroupCreateOnDiscover.Name+"', '1') "+
 		"ON CONFLICT (organization_id, name) DO NOTHING",
 		organizationID)
 	return err
