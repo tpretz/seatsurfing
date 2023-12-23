@@ -43,6 +43,7 @@ var (
 	SettingShowNames                     SettingName = SettingName{Name: "show_names", Type: SettingTypeBool}
 	SettingAllowBookingsNonExistingUsers SettingName = SettingName{Name: "allow_booking_nonexist_users", Type: SettingTypeBool}
 	SettingSubscriptionMaxUsers          SettingName = SettingName{Name: "subscription_max_users", Type: SettingTypeInt}
+	SettingSubscriptionMaxGroups         SettingName = SettingName{Name: "subscription_max_groups", Type: SettingTypeInt}
 	SettingDefaultTimezone               SettingName = SettingName{Name: "default_timezone", Type: SettingTypeString}
 )
 
@@ -180,6 +181,7 @@ func (r *SettingsRepository) InitDefaultSettingsForOrg(organizationID string) er
 		"VALUES "+
 		"($1, '"+SettingActiveSubscription.Name+"', '0'), "+
 		"($1, '"+SettingSubscriptionMaxUsers.Name+"', '"+strconv.Itoa(GetConfig().OrgSignupMaxUsers)+"'), "+
+		"($1, '"+SettingSubscriptionMaxGroups.Name+"', '"+strconv.Itoa(GetConfig().OrgSignupMaxGroups)+"'), "+
 		"($1, '"+SettingAllowAnyUser.Name+"', '1'), "+
 		"($1, '"+SettingDailyBasisBooking.Name+"', '0'), "+
 		"($1, '"+SettingShowNames.Name+"', '0'), "+

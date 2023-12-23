@@ -39,6 +39,7 @@ type Config struct {
 	OrgSignupDomain                     string
 	OrgSignupAdmin                      string
 	OrgSignupMaxUsers                   int
+	OrgSignupMaxGroups                  int
 	OrgSignupDelete                     bool
 	LoginProtectionMaxFails             int
 	LoginProtectionSlidingWindowSeconds int
@@ -92,6 +93,7 @@ func (c *Config) ReadConfig() {
 	c.OrgSignupDomain = c.getEnv("ORG_SIGNUP_DOMAIN", ".on.seatsurfing.local")
 	c.OrgSignupAdmin = c.getEnv("ORG_SIGNUP_ADMIN", "admin")
 	c.OrgSignupMaxUsers = c.getEnvInt("ORG_SIGNUP_MAX_USERS", 10)
+	c.OrgSignupMaxGroups = c.getEnvInt("ORG_SIGNUP_MAX_GROUPS", 0)
 	c.OrgSignupDelete = (c.getEnv("ORG_SIGNUP_DELETE", "0") == "1")
 	c.LoginProtectionMaxFails = c.getEnvInt("LOGIN_PROTECTION_MAX_FAILS", 10)
 	c.LoginProtectionSlidingWindowSeconds = c.getEnvInt("LOGIN_PROTECTION_SLIDING_WINDOW_SECONDS", 600)

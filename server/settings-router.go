@@ -199,6 +199,7 @@ func (router *SettingsRouter) isValidSettingNameReadAdmin(name string) bool {
 		name == SettingAllowAnyUser.Name ||
 		name == SettingActiveSubscription.Name ||
 		name == SettingSubscriptionMaxUsers.Name ||
+		name == SettingSubscriptionMaxGroups.Name ||
 		name == SettingConfluenceServerSharedSecret.Name ||
 		name == SettingConfluenceAnonymous.Name ||
 		name == SysSettingOrgSignupDelete {

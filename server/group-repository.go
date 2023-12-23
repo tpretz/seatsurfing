@@ -29,7 +29,7 @@ var groupRepositoryOnce sync.Once
 func GetGroupRepository() *GroupRepository {
 	groupRepositoryOnce.Do(func() {
 		groupRepository = &GroupRepository{}
-		_, err := GetDatabase().DB().Exec("CREATE TABLE IF NOT EXISTS groups (" + // will need a join table too
+		_, err := GetDatabase().DB().Exec("CREATE TABLE IF NOT EXISTS groups (" +
 			"id uuid DEFAULT uuid_generate_v4(), " +
 			"organization_id uuid NOT NULL, " +
 			"name VARCHAR NOT NULL, " +
@@ -43,11 +43,23 @@ func GetGroupRepository() *GroupRepository {
 		if err != nil {
 			panic(err)
 		}
+		// join table, ensure user or group removals cascade
+		_, err = GetDatabase().DB().Exec("CREATE TABLE IF NOT EXISTS group_members (" +
+			"user_id uuid NOT NULL, " +
+			"group_id uuid NOT NULL, " +
+			"type INT DEFAULT 0, " +
+			"PRIMARY KEY (user_id, group_id)" +
+			"FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, " +
+			"FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE)")
+		if err != nil {
+			panic(err)
+		}
 	})
 	return groupRepository
 }
 
 func (r *GroupRepository) RunSchemaUpgrade(curVersion, targetVersion int) {
+	// this is v1 of the group schema
 }
 
 func (r *GroupRepository) Create(e *Group) error {
@@ -173,10 +185,16 @@ func (r *GroupRepository) canCreateGroup(org *Organization) bool {
 
 // add functions to object for add member, remove member, list members, etc.
 func (g *Group) AddMember(user *User) error {
+	tye := GroupTypeLocal
+	if user.AuthProviderID != "" {
+		tye = GroupTypeRemote
+	}
 	_, err := GetDatabase().DB().Exec("INSERT INTO group_members "+
-		"(group_id, user_id) "+
-		"VALUES ($1, $2)",
-		g.ID, user.ID)
+		"(group_id, user_id, type) "+
+		"VALUES ($1, $2, $3) "+
+		// allow local membership to be added to an already auto discovered group via auth provider, don't allow auto downgrades
+		"ON CONFLICT (group_id, user_id) DO UPDATE SET type = $3 WHERE type < $3",
+		g.ID, user.ID, tye)
 	return err
 }
 
@@ -187,25 +205,25 @@ func (g *Group) RemoveMember(user *User) error {
 	return err
 }
 
-func (g *Group) GetMembers() ([]*User, error) {
+func (g *Group) Members() ([]*User, error) {
 	var result []*User
 	// only return fields in the User object
-	rows, err := GetDatabase().DB().Query("SELECT u.id, u.organization_id, u.email, u.password, u.first_name, u.last_name, u.role, u.last_login, u.created, u.updated, u.deleted "+
+	rows, err := GetDatabase().DB().Query("SELECT u.id, u.organization_id, u.email, u.role, u.password, u.auth_provider_id, u.atlassian_id, u.disabled, u.ban_expiry "+
 		"FROM users u "+
 		"INNER JOIN group_members gm ON gm.user_id = u.id "+
 		"WHERE gm.group_id = $1 "+
-		"ORDER BY u.last_name, u.first_name", g.ID)
+		"ORDER BY u.email", g.ID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		u := &User{}
-		err = rows.Scan(&u.ID, &u.OrganizationID, &u.Email, &u.Password, &u.FirstName, &u.LastName, &u.Role, &u.LastLogin, &u.Created, &u.Updated, &u.Deleted)
+		e := &User{}
+		err = rows.Scan(&e.ID, &e.OrganizationID, &e.Email, &e.Role, &e.HashedPassword, &e.AuthProviderID, &e.AtlassianID, &e.Disabled, &e.BanExpiry)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, u)
+		result = append(result, e)
 	}
 	return result, nil
 }
