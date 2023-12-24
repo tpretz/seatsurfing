@@ -123,6 +123,28 @@ func (r *GroupRepository) GetAll(organizationID string, maxResults int, offset i
 	return result, nil
 }
 
+func (r *GroupRepository) GetAllForUser(organizationID string, userID string) ([]*Group, error) {
+	var result []*Group
+	rows, err := GetDatabase().DB().Query("SELECT g.id, g.organization_id, g.name, g.description, g.type "+
+		"FROM groups AS g"+
+		"INNER JOIN group_members AS gm ON gm.group_id = g.id "+
+		"WHERE g.organization_id = $1 AND gm.user_id = $2 "+
+		"ORDER BY g.name ", organizationID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		e := &Group{}
+		err = rows.Scan(&e.ID, &e.OrganizationID, &e.Name, &e.Description, &e.Type)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, e)
+	}
+	return result, nil
+}
+
 func (r *GroupRepository) GetAllIDs() ([]string, error) {
 	var result []string
 	rows, err := GetDatabase().DB().Query("SELECT id " +
@@ -226,4 +248,8 @@ func (g *Group) Members() ([]*User, error) {
 		result = append(result, e)
 	}
 	return result, nil
+}
+
+func (g *Group) Delete() error {
+	return GetGroupRepository().Delete(g)
 }

@@ -392,3 +392,8 @@ func (r *UserRepository) HasAnyUserInOrgPasswordSet(organizationID string) (bool
 	}
 	return result > 0, nil
 }
+
+func (u *User) Groups() ([]*Group, error) {
+	g, err := GetGroupRepository().GetAllForUser(u.OrganizationID, u.ID)
+	return g, err
+}
