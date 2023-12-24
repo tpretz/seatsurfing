@@ -504,6 +504,7 @@ func (router *AuthRouter) getUserInfo(provider *AuthProvider, state string, code
 	if (result[provider.UserInfoEmailField] == nil) || (strings.TrimSpace(result[provider.UserInfoEmailField].(string)) == "") {
 		return nil, nil, fmt.Errorf("could not read email address from field: %s", provider.UserInfoEmailField)
 	}
+	// look to extract roles here and add to claims
 	claims := &Claims{
 		Email: result[provider.UserInfoEmailField].(string),
 	}

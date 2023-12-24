@@ -138,6 +138,17 @@ func createTestUserInOrg(org *Organization) *User {
 	return createTestUserInOrgDomain(org, "test.com")
 }
 
+func createTestGroupInOrg(org *Organization) *Group {
+	group := &Group{
+		Name:           "Test Group - " + uuid.New().String(),
+		OrganizationID: org.ID,
+	}
+	if err := GetGroupRepository().Create(group); err != nil {
+		panic(err)
+	}
+	return group
+}
+
 func createTestUserOrgAdminDomain(org *Organization, domain string) *User {
 	user := &User{
 		Email:          uuid.New().String() + "@" + domain,
@@ -180,16 +191,19 @@ func createLoginTestUserParams() *LoginResponse {
 }
 
 func dropTestDB() {
-	tables := []string{"auth_providers", "auth_states", "bookings", "spaces", "locations", "organizations_domains", "organizations", "users", "signups", "settings", "subscription_events"}
+	tables := []string{"auth_providers", "auth_states", "bookings", "spaces", "locations", "organizations_domains", "organizations", "users", "signups", "settings", "subscription_events", "groups", "group_members"}
 	for _, s := range tables {
 		GetDatabase().DB().Exec("DROP TABLE IF EXISTS " + s)
 	}
 }
 
 func clearTestDB() {
-	tables := []string{"auth_providers", "auth_states", "auth_attempts", "bookings", "spaces", "locations", "organizations_domains", "organizations", "users", "users_preferences", "signups", "settings", "subscription_events"}
+	tables := []string{"auth_providers", "auth_states", "auth_attempts", "bookings", "spaces", "locations", "organizations_domains", "organizations", "users", "users_preferences", "signups", "settings", "subscription_events", "groups", "group_members"}
 	for _, s := range tables {
-		GetDatabase().DB().Exec("TRUNCATE " + s)
+		_, err := GetDatabase().DB().Exec("TRUNCATE " + s + " CASCADE")
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 

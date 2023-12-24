@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"strings"
 	"sync"
 )
@@ -43,23 +44,25 @@ func GetGroupRepository() *GroupRepository {
 		if err != nil {
 			panic(err)
 		}
-		// join table, ensure user or group removals cascade
-		_, err = GetDatabase().DB().Exec("CREATE TABLE IF NOT EXISTS group_members (" +
-			"user_id uuid NOT NULL, " +
-			"group_id uuid NOT NULL, " +
-			"type INT DEFAULT 0, " +
-			"PRIMARY KEY (user_id, group_id)" +
-			"FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, " +
-			"FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE)")
-		if err != nil {
-			panic(err)
-		}
 	})
 	return groupRepository
 }
 
 func (r *GroupRepository) RunSchemaUpgrade(curVersion, targetVersion int) {
-	// this is v1 of the group schema
+	if curVersion < 15 {
+		// join table, ensure user or group removals cascade
+		_, err := GetDatabase().DB().Exec("CREATE TABLE IF NOT EXISTS group_members (" +
+			"user_id uuid NOT NULL, " +
+			"group_id uuid NOT NULL, " +
+			"type INT DEFAULT 0, " +
+			"PRIMARY KEY (user_id, group_id)," +
+			"FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, " +
+			"FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE)")
+		if err != nil {
+			log.Printf("Error %+v\n", err)
+			panic(err)
+		}
+	}
 }
 
 func (r *GroupRepository) Create(e *Group) error {
@@ -73,7 +76,6 @@ func (r *GroupRepository) Create(e *Group) error {
 		return err
 	}
 	e.ID = id
-	GetUserPreferencesRepository().InitDefaultSettingsForUser(e.ID)
 	return nil
 }
 
@@ -169,7 +171,7 @@ func (r *GroupRepository) Update(e *Group) error {
 		"organization_id = $1, "+
 		"name = $2, "+
 		"description = $3, "+
-		"type = $4, "+
+		"type = $4 "+
 		"WHERE id = $5",
 		e.OrganizationID, strings.ToLower(e.Name), CheckNullString(e.Description), e.Type, e.ID)
 	return err
@@ -252,4 +254,8 @@ func (g *Group) Members() ([]*User, error) {
 
 func (g *Group) Delete() error {
 	return GetGroupRepository().Delete(g)
+}
+
+func (g *Group) Update() error {
+	return GetGroupRepository().Update(g)
 }
