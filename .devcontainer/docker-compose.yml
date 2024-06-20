@@ -21,7 +21,9 @@ services:
   booking-ui:
     build:
       context: ../
-      dockerfile: Dockerfile.ui
+      dockerfile: .devcontainer/booking-ui/Dockerfile
+    volumes:
+      - ../booking-ui/src/:/app/src/
     restart: always
     networks:
       http:
