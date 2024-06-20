@@ -25,13 +25,20 @@ services:
     volumes:
       - ../booking-ui/src/:/app/src/
     restart: always
+    entrypoint: ["/usr/local/bin/npm", "run", "dev"]
+    volumes:
+      - ../booking-ui/src/:/app/src/
     networks:
       http:
   admin-ui:
     build:
       context: ../
       dockerfile: Dockerfile.admin
+      target: builder
     restart: always
+    entrypoint: ["/usr/local/bin/npm", "run", "dev"]
+    volumes:
+      - ../admin-ui/src/:/app/src/
     networks:
       http:
   db:
