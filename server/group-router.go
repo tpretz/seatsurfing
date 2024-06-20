@@ -23,6 +23,7 @@ type GetGroupResponse struct {
 	Type           int    `json:"type"`
 	Description    string `json:"description"`
 	OrganizationID string `json:"organizationId"`
+	Members	  	   []string `json:"members"`
 }
 
 type GetGroupCountResponse struct {
@@ -82,7 +83,7 @@ func (router *GroupRouter) getOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	vars := mux.Vars(r)
-	e, err := GetGroupRepository().GetOneWithMembers(vars["id"])
+	e, err := GetGroupRepository().GetOne(vars["id"])
 	if err != nil {
 		log.Println(err)
 		SendNotFound(w)
@@ -92,8 +93,21 @@ func (router *GroupRouter) getOne(w http.ResponseWriter, r *http.Request) {
 		SendForbidden(w)
 		return
 	}
+	members, err := e.Members()
+	if err != nil {
+		log.Println(err)
+		SendInternalServerError(w)
+		return
+	}
+
+	// create array of member emails
+	var memberEmails []string
+	for _, member := range members {
+		memberEmails = append(memberEmails, member.Email)
+	}
 
 	res := router.copyToRestModel(e, true)
+	res.Members = memberEmails
 	SendJSON(w, res)
 }
 

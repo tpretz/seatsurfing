@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -58,4 +59,35 @@ func TestGroupsCount(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkTestInt(t, 2, res)
+}
+
+func TestGroupsMembers(t *testing.T) {
+	clearTestDB()
+	org := createTestOrg("test.com")
+	grp := createTestGroupInOrg(org)
+
+	usra := createTestUserInOrg(org);
+	usrb := createTestUserInOrg(org);
+
+	res, err := GetGroupRepository().GetOne(grp.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = res.AddMember(usra)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = res.AddMember(usrb)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	members, err := res.Members()
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkTestInt(t, 2, len(members))
+
+	//fmt.Printf("members: %s\n", members[0].Email)
 }

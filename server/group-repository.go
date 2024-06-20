@@ -35,7 +35,7 @@ func GetGroupRepository() *GroupRepository {
 			"organization_id uuid NOT NULL, " +
 			"name VARCHAR NOT NULL, " +
 			"description VARCHAR, " +
-			"type INT, " +
+			"mode INT, " +
 			"PRIMARY KEY (id))")
 		if err != nil {
 			panic(err)
@@ -54,7 +54,7 @@ func (r *GroupRepository) RunSchemaUpgrade(curVersion, targetVersion int) {
 		_, err := GetDatabase().DB().Exec("CREATE TABLE IF NOT EXISTS group_members (" +
 			"user_id uuid NOT NULL, " +
 			"group_id uuid NOT NULL, " +
-			"type INT DEFAULT 0, " +
+			"mode INT DEFAULT 0, " +
 			"PRIMARY KEY (user_id, group_id)," +
 			"FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, " +
 			"FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE)")
@@ -68,7 +68,7 @@ func (r *GroupRepository) RunSchemaUpgrade(curVersion, targetVersion int) {
 func (r *GroupRepository) Create(e *Group) error {
 	var id string
 	err := GetDatabase().DB().QueryRow("INSERT INTO groups "+
-		"(organization_id, name, description, type) "+
+		"(organization_id, name, description, mode) "+
 		"VALUES ($1, $2, $3, $4) "+
 		"RETURNING id",
 		e.OrganizationID, strings.ToLower(e.Name), CheckNullString(e.Description), e.Type).Scan(&id)
@@ -81,7 +81,7 @@ func (r *GroupRepository) Create(e *Group) error {
 
 func (r *GroupRepository) GetOne(id string) (*Group, error) {
 	e := &Group{}
-	err := GetDatabase().DB().QueryRow("SELECT id, organization_id, name, description, type "+
+	err := GetDatabase().DB().QueryRow("SELECT id, organization_id, name, description, mode "+
 		"FROM groups "+
 		"WHERE id = $1",
 		id).Scan(&e.ID, &e.OrganizationID, &e.Name, &e.Description, &e.Type)
@@ -93,7 +93,7 @@ func (r *GroupRepository) GetOne(id string) (*Group, error) {
 
 func (r *GroupRepository) GetByName(name string) (*Group, error) {
 	e := &Group{}
-	err := GetDatabase().DB().QueryRow("SELECT id, organization_id, name, description, type "+
+	err := GetDatabase().DB().QueryRow("SELECT id, organization_id, name, description, mode "+
 		"FROM groups "+
 		"WHERE LOWER(name) = $1",
 		strings.ToLower(name)).Scan(&e.ID, &e.OrganizationID, &e.Name, &e.Description, &e.Type)
@@ -105,7 +105,7 @@ func (r *GroupRepository) GetByName(name string) (*Group, error) {
 
 func (r *GroupRepository) GetAll(organizationID string, maxResults int, offset int) ([]*Group, error) {
 	var result []*Group
-	rows, err := GetDatabase().DB().Query("SELECT id, organization_id, name, description, type "+
+	rows, err := GetDatabase().DB().Query("SELECT id, organization_id, name, description, mode "+
 		"FROM groups "+
 		"WHERE organization_id = $1 "+
 		"ORDER BY name "+
@@ -127,7 +127,7 @@ func (r *GroupRepository) GetAll(organizationID string, maxResults int, offset i
 
 func (r *GroupRepository) GetAllForUser(organizationID string, userID string) ([]*Group, error) {
 	var result []*Group
-	rows, err := GetDatabase().DB().Query("SELECT g.id, g.organization_id, g.name, g.description, g.type "+
+	rows, err := GetDatabase().DB().Query("SELECT g.id, g.organization_id, g.name, g.description, g.mode "+
 		"FROM groups AS g"+
 		"INNER JOIN group_members AS gm ON gm.group_id = g.id "+
 		"WHERE g.organization_id = $1 AND gm.user_id = $2 "+
@@ -171,7 +171,7 @@ func (r *GroupRepository) Update(e *Group) error {
 		"organization_id = $1, "+
 		"name = $2, "+
 		"description = $3, "+
-		"type = $4 "+
+		"mode = $4 "+
 		"WHERE id = $5",
 		e.OrganizationID, strings.ToLower(e.Name), CheckNullString(e.Description), e.Type, e.ID)
 	return err
@@ -214,10 +214,11 @@ func (g *Group) AddMember(user *User) error {
 		tye = GroupTypeRemote
 	}
 	_, err := GetDatabase().DB().Exec("INSERT INTO group_members "+
-		"(group_id, user_id, type) "+
+		"(group_id, user_id, mode) "+
 		"VALUES ($1, $2, $3) "+
 		// allow local membership to be added to an already auto discovered group via auth provider, don't allow auto downgrades
-		"ON CONFLICT (group_id, user_id) DO UPDATE SET type = $3 WHERE type < $3",
+		"ON CONFLICT (group_id, user_id) DO UPDATE SET mode = EXCLUDED.mode "+
+		"WHERE group_members.mode < EXCLUDED.mode",
 		g.ID, user.ID, tye)
 	return err
 }
