@@ -274,7 +274,7 @@ func (router *BookingRouter) delete(w http.ResponseWriter, r *http.Request) {
 		SendInternalServerError(w)
 		return
 	}
-	completed, err := GetSnsClient().PushBookingEvent(&e.Booking, GetRequestUser(r).Email, space.Name, location.Name, "CREATED")
+	completed, err := GetSnsClient().PushBookingEvent(&e.Booking, GetRequestUser(r).Email, space.Name, location.Name, "DELETED")
 	if err != nil || !completed {
 		log.Printf("Push to SNS was not done because: %v", err)
 	}
