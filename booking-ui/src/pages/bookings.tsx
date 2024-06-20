@@ -8,6 +8,7 @@ import { NextRouter } from 'next/router';
 import NavBar from '@/components/NavBar';
 import withReadyRouter from '@/components/withReadyRouter';
 import RuntimeConfig from '@/components/RuntimeConfig';
+import GenericModal from '@/components/GenericModal';
 
 interface State {
   loading: boolean
@@ -40,6 +41,7 @@ class Bookings extends React.Component<Props, State> {
 
   loadData = () => {
     Booking.list().then(list => {
+      console.log(list)
       this.data = list;
       this.setState({ loading: false });
     });
@@ -78,6 +80,7 @@ class Bookings extends React.Component<Props, State> {
   }
 
   render() {
+    console.log('test')
     if (this.state.loading) {
       return <Loading />;
     }
@@ -107,9 +110,12 @@ class Bookings extends React.Component<Props, State> {
             </ListGroup>
           </Form>
         </div>
-        <Modal show={this.state.selectedItem != null} onHide={() => this.setState({ selectedItem: null })}>
+        <GenericModal heading={'Modify Booking'} showModal={this.state.selectedItem != null} submitFunction={() => this.cancelBooking(this.state.selectedItem)} submitButtonText='cancelBooking'
+        body = {this.props.t("confirmCancelBooking", { enter: formatter.format(this.state.selectedItem?.enter), interpolation: { escapeValue: false } })} closeModal={() => this.setState({selectedItem : null})}></GenericModal>
+
+        {/* <Modal show={this.state.selectedItem != null} onHide={() => this.setState({ selectedItem: null })}>
           <Modal.Header closeButton>
-            <Modal.Title>{this.props.t("cancelBooking")}</Modal.Title>
+            <Modal.Title>{this.props.t("Modify Booking")}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <p>{this.props.t("confirmCancelBooking", { enter: formatter.format(this.state.selectedItem?.enter), interpolation: { escapeValue: false } })}</p>
@@ -118,11 +124,14 @@ class Bookings extends React.Component<Props, State> {
             <Button variant="secondary" onClick={() => this.setState({ selectedItem: null })}>
               {this.props.t("back")}
             </Button>
+            <Button variant="primary" onClick={() => this.setState({ isModify: true}) }>
+              {this.props.t("Modify")}
+            </Button>
             <Button variant="danger" onClick={() => this.cancelBooking(this.state.selectedItem)}>
               {this.props.t("cancelBooking")}
             </Button>
           </Modal.Footer>
-        </Modal>
+        </Modal> */}
       </>
     );
   }
