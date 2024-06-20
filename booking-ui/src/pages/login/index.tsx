@@ -130,9 +130,7 @@ class Login extends React.Component<Props, State> {
           Ajax.PERSISTER.persistRefreshTokenInLocalStorage(Ajax.CREDENTIALS);
         }
         RuntimeConfig.setLoginDetails().then(() => {
-          this.setState({
-            redirect: "/search"
-          });
+          this.props.router.back();
         });
       });
     }).catch(() => {
