@@ -21,9 +21,6 @@ services:
   booking-ui:
     build:
       context: ../
-      dockerfile: .devcontainer/booking-ui/Dockerfile
-    volumes:
-      - ../booking-ui/src/:/app/src/
     restart: always
     entrypoint: ["/usr/local/bin/npm", "run", "dev"]
     volumes:
