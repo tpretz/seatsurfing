@@ -43,6 +43,11 @@ type Config struct {
 	LoginProtectionMaxFails             int
 	LoginProtectionSlidingWindowSeconds int
 	LoginProtectionBanMinutes           int
+	AWSAccessKey                        string
+	AWSSecretAccessKey                  string
+	AWSSessionToken                     string
+	AWSSNSTopic                         string
+	AWSRegion                           string
 }
 
 var _configInstance *Config
@@ -96,6 +101,11 @@ func (c *Config) ReadConfig() {
 	c.LoginProtectionMaxFails = c.getEnvInt("LOGIN_PROTECTION_MAX_FAILS", 10)
 	c.LoginProtectionSlidingWindowSeconds = c.getEnvInt("LOGIN_PROTECTION_SLIDING_WINDOW_SECONDS", 600)
 	c.LoginProtectionBanMinutes = c.getEnvInt("LOGIN_PROTECTION_BAN_MINUTES", 5)
+	c.AWSAccessKey = c.getEnv("AWS_ACCESS_KEY_ID", "")
+	c.AWSSecretAccessKey = c.getEnv("AWS_SECRET_ACCESS_KEY", "")
+	c.AWSSessionToken = c.getEnv("AWS_SESSION_TOKEN", "")
+	c.AWSSNSTopic = c.getEnv("AWS_SNS_TOPIC", "")
+	c.AWSRegion = c.getEnv("AWS_REGION", "")
 }
 
 func (c *Config) Print() {

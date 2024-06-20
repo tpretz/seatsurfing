@@ -274,6 +274,10 @@ func (router *BookingRouter) delete(w http.ResponseWriter, r *http.Request) {
 		SendInternalServerError(w)
 		return
 	}
+	completed, err := GetSnsClient().PushBookingEvent(&e.Booking, GetRequestUser(r).Email, space.Name, location.Name, "CREATED")
+	if err != nil || !completed {
+		log.Printf("Push to SNS was not done because: %v", err)
+	}
 	SendUpdated(w)
 }
 
@@ -423,6 +427,12 @@ func (router *BookingRouter) create(w http.ResponseWriter, r *http.Request) {
 		SendInternalServerError(w)
 		return
 	}
+
+	completed, err := GetSnsClient().PushBookingEvent(e, requestUser.Email, space.Name, location.Name, "CREATED")
+	if err != nil || !completed {
+		log.Printf("Push to SNS was not done because: %v", err)
+	}
+
 	SendCreated(w, e.ID)
 }
 
