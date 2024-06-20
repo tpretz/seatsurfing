@@ -18,6 +18,20 @@ services:
       JWT_SIGNING_KEY: 'some_random_string'
       BOOKING_UI_BACKEND: 'booking-ui:3001'
       ADMIN_UI_BACKEND: 'admin-ui:3000'
+  booking-ui:
+    build:
+      context: ../
+      dockerfile: Dockerfile.ui
+    restart: always
+    networks:
+      http:
+  admin-ui:
+    build:
+      context: ../
+      dockerfile: Dockerfile.admin
+    restart: always
+    networks:
+      http:
   db:
     image: postgres:15-alpine
     restart: always
