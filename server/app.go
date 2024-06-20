@@ -54,6 +54,7 @@ func (a *App) InitializeRouter() {
 	routers["/search/"] = &SearchRouter{}
 	routers["/setting/"] = &SettingsRouter{}
 	routers["/confluence/"] = &ConfluenceRouter{}
+	routers["/group/"] = &GroupRouter{}
 	routers["/uc/"] = &CheckUpdateRouter{}
 	if config.OrgSignupEnabled {
 		routers["/signup/"] = &SignupRouter{}
