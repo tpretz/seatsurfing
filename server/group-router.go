@@ -74,6 +74,7 @@ func (router *GroupRouter) getSelf(w http.ResponseWriter, r *http.Request) {
 	SendJSON(w, groupNames)
 }
 
+// need to include members
 func (router *GroupRouter) getOne(w http.ResponseWriter, r *http.Request) {
 	user := GetRequestUser(r)
 	if !CanAdminOrg(user, user.OrganizationID) {
@@ -81,7 +82,7 @@ func (router *GroupRouter) getOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	vars := mux.Vars(r)
-	e, err := GetGroupRepository().GetOne(vars["id"])
+	e, err := GetGroupRepository().GetOneWithMembers(vars["id"])
 	if err != nil {
 		log.Println(err)
 		SendNotFound(w)
@@ -91,6 +92,7 @@ func (router *GroupRouter) getOne(w http.ResponseWriter, r *http.Request) {
 		SendForbidden(w)
 		return
 	}
+
 	res := router.copyToRestModel(e, true)
 	SendJSON(w, res)
 }
