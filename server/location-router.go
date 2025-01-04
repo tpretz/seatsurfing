@@ -3,12 +3,15 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"image"
 	"io"
 	"log"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -53,11 +56,23 @@ type GetSpaceAttributeValueResponse struct {
 	Value       string `json:"value"`
 }
 
+type SearchLocationRequest struct {
+	Enter      time.Time         `json:"enter" validate:"required"`
+	Leave      time.Time         `json:"leave" validate:"required"`
+	Attributes []SearchAttribute `json:"attributes"`
+}
+
 type SearchAttribute struct {
 	AttributeID string `json:"attributeId"`
 	Comparator  string `json:"comparator"`
 	Value       string `json:"value"`
 }
+
+const (
+	SearchAttributeNumSpaces     string = "numSpaces"
+	SearchAttributeNumFreeSpaces string = "numFreeSpaces"
+	SearchAttributeBuddyOnSite   string = "buddyOnSite"
+)
 
 func (router *LocationRouter) setupRoutes(s *mux.Router) {
 	s.HandleFunc("/search", router.search).Methods("POST")
@@ -186,82 +201,87 @@ func (router *LocationRouter) getAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rouer *LocationRouter) matchesSearchAttributes(entityID string, m *[]SearchAttribute, attributeValues []*SpaceAttributeValue) bool {
+	var matchString = func(a, b, comparator string) bool {
+		if comparator == "eq" {
+			return a == b
+		} else if comparator == "neq" {
+			return a != b
+		} else if comparator == "contains" {
+			return strings.Contains(a, b)
+		} else if comparator == "ncontains" {
+			return !strings.Contains(a, b)
+		} else if comparator == "gt" {
+			searchAttrInt, err := strconv.Atoi(a)
+			if err != nil {
+				return false
+			}
+			attrValInt, err := strconv.Atoi(b)
+			if err != nil {
+				return false
+			}
+			return searchAttrInt > attrValInt
+		} else if comparator == "lt" {
+			searchAttrInt, err := strconv.Atoi(a)
+			if err != nil {
+				return false
+			}
+			attrValInt, err := strconv.Atoi(b)
+			if err != nil {
+				return false
+			}
+			return searchAttrInt < attrValInt
+		} else if comparator == "gte" {
+			searchAttrInt, err := strconv.Atoi(a)
+			if err != nil {
+				return false
+			}
+			attrValInt, err := strconv.Atoi(b)
+			if err != nil {
+				return false
+			}
+			return searchAttrInt >= attrValInt
+		} else if comparator == "lte" {
+			searchAttrInt, err := strconv.Atoi(a)
+			if err != nil {
+				return false
+			}
+			attrValInt, err := strconv.Atoi(b)
+			if err != nil {
+				return false
+			}
+			return searchAttrInt <= attrValInt
+		}
+		return false
+	}
+
+	var matchArray = func(a []string, b, comparator string) bool {
+		if comparator == "contains" {
+			if b == "*" {
+				return len(a) > 0
+			}
+			return slices.Contains(a, b)
+		} else if comparator == "ncontains" {
+			if b == "*" {
+				return len(a) == 0
+			}
+			return !slices.Contains(a, b)
+		}
+		return false
+	}
+
 	for _, searchAttr := range *m {
 		found := false
 		for _, attrVal := range attributeValues {
 			if (attrVal.AttributeID == searchAttr.AttributeID) && (attrVal.EntityID == entityID) {
-				if searchAttr.Comparator == "eq" {
-					if attrVal.Value != searchAttr.Value {
+				if strings.Index(attrVal.Value, "[") == 0 && strings.Index(attrVal.Value, "]") == len(attrVal.Value)-1 {
+					var arr []string
+					if err := json.Unmarshal([]byte(attrVal.Value), &arr); err != nil {
+						log.Println(err)
 						return false
 					}
-					found = true
-				} else if searchAttr.Comparator == "neq" {
-					if attrVal.Value == searchAttr.Value {
-						return false
-					}
-					found = true
-				} else if searchAttr.Comparator == "contains" {
-					if !strings.Contains(attrVal.Value, searchAttr.Value) {
-						return false
-					}
-					found = true
-				} else if searchAttr.Comparator == "ncontains" {
-					if strings.Contains(attrVal.Value, searchAttr.Value) {
-						return false
-					}
-					found = true
-				} else if searchAttr.Comparator == "gt" {
-					searchAttrInt, err := strconv.Atoi(searchAttr.Value)
-					if err != nil {
-						return false
-					}
-					attrValInt, err := strconv.Atoi(attrVal.Value)
-					if err != nil {
-						return false
-					}
-					if attrValInt <= searchAttrInt {
-						return false
-					}
-					found = true
-				} else if searchAttr.Comparator == "lt" {
-					searchAttrInt, err := strconv.Atoi(searchAttr.Value)
-					if err != nil {
-						return false
-					}
-					attrValInt, err := strconv.Atoi(attrVal.Value)
-					if err != nil {
-						return false
-					}
-					if attrValInt >= searchAttrInt {
-						return false
-					}
-					found = true
-				} else if searchAttr.Comparator == "gte" {
-					searchAttrInt, err := strconv.Atoi(searchAttr.Value)
-					if err != nil {
-						return false
-					}
-					attrValInt, err := strconv.Atoi(attrVal.Value)
-					if err != nil {
-						return false
-					}
-					if attrValInt < searchAttrInt {
-						return false
-					}
-					found = true
-				} else if searchAttr.Comparator == "lte" {
-					searchAttrInt, err := strconv.Atoi(searchAttr.Value)
-					if err != nil {
-						return false
-					}
-					attrValInt, err := strconv.Atoi(attrVal.Value)
-					if err != nil {
-						return false
-					}
-					if attrValInt > searchAttrInt {
-						return false
-					}
-					found = true
+					found = matchArray(arr, searchAttr.Value, searchAttr.Comparator)
+				} else {
+					found = matchString(attrVal.Value, searchAttr.Value, searchAttr.Comparator)
 				}
 			}
 		}
@@ -272,14 +292,75 @@ func (rouer *LocationRouter) matchesSearchAttributes(entityID string, m *[]Searc
 	return true
 }
 
+func (router *LocationRouter) searchInputContains(m *[]SearchAttribute, attributeID string) bool {
+	for _, e := range *m {
+		if e.AttributeID == attributeID {
+			return true
+		}
+	}
+	return false
+}
+
+func (router *LocationRouter) searchAttachNumSpaces(attributeValues []*SpaceAttributeValue, organizationID string) ([]*SpaceAttributeValue, error) {
+	totalSpaces, err := GetSpaceRepository().GetTotalCountMap(organizationID)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range totalSpaces {
+		attributeValues = append(attributeValues, &SpaceAttributeValue{
+			AttributeID: SearchAttributeNumSpaces,
+			EntityID:    k,
+			EntityType:  SpaceAttributeValueEntityTypeLocation,
+			Value:       strconv.Itoa(v),
+		})
+	}
+	return attributeValues, nil
+}
+
+func (router *LocationRouter) searchAttachNumFreeSpaces(attributeValues []*SpaceAttributeValue, organizationID string, enter, leave time.Time) ([]*SpaceAttributeValue, error) {
+	freeSpaces, err := GetSpaceRepository().GetFreeCountMap(organizationID, enter, leave)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range freeSpaces {
+		attributeValues = append(attributeValues, &SpaceAttributeValue{
+			AttributeID: SearchAttributeNumFreeSpaces,
+			EntityID:    k,
+			EntityType:  SpaceAttributeValueEntityTypeLocation,
+			Value:       strconv.Itoa(v),
+		})
+	}
+	return attributeValues, nil
+}
+
+func (router *LocationRouter) searchAttachBuddiesOnSite(attributeValues []*SpaceAttributeValue, organizationID string, enter, leave time.Time) ([]*SpaceAttributeValue, error) {
+	buddiesOnSite, err := GetSpaceRepository().GetBookingUserIDMap(organizationID, enter, leave)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range buddiesOnSite {
+		json, err := json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+		attributeValues = append(attributeValues, &SpaceAttributeValue{
+			AttributeID: SearchAttributeBuddyOnSite,
+			EntityID:    k,
+			EntityType:  SpaceAttributeValueEntityTypeLocation,
+			Value:       string(json),
+		})
+	}
+	return attributeValues, nil
+}
+
 func (router *LocationRouter) search(w http.ResponseWriter, r *http.Request) {
-	var m []SearchAttribute
-	if err := UnmarshalBody(r, &m); err != nil {
+	var m SearchLocationRequest
+	if err := UnmarshalValidateBody(r, &m); err != nil {
 		log.Println(err)
 		SendBadRequest(w)
 		return
 	}
-	if len(m) == 0 {
+	if len(m.Attributes) == 0 {
 		router.getAll(w, r)
 		return
 	}
@@ -294,10 +375,35 @@ func (router *LocationRouter) search(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 		SendInternalServerError(w)
+		return
+	}
+	if router.searchInputContains(&m.Attributes, SearchAttributeNumSpaces) {
+		attributeValues, err = router.searchAttachNumSpaces(attributeValues, user.OrganizationID)
+		if err != nil {
+			log.Println(err)
+			SendInternalServerError(w)
+			return
+		}
+	}
+	if router.searchInputContains(&m.Attributes, SearchAttributeNumFreeSpaces) {
+		attributeValues, err = router.searchAttachNumFreeSpaces(attributeValues, user.OrganizationID, m.Enter, m.Leave)
+		if err != nil {
+			log.Println(err)
+			SendInternalServerError(w)
+			return
+		}
+	}
+	if router.searchInputContains(&m.Attributes, SearchAttributeBuddyOnSite) {
+		attributeValues, err = router.searchAttachBuddiesOnSite(attributeValues, user.OrganizationID, m.Enter, m.Leave)
+		if err != nil {
+			log.Println(err)
+			SendInternalServerError(w)
+			return
+		}
 	}
 	res := []*GetLocationResponse{}
 	for _, e := range list {
-		if router.matchesSearchAttributes(e.ID, &m, attributeValues) {
+		if router.matchesSearchAttributes(e.ID, &m.Attributes, attributeValues) {
 			m := router.copyToRestModel(e)
 			res = append(res, m)
 		}
