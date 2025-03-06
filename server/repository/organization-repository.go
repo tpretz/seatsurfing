@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	. "github.com/seatsurfing/seatsurfing/server/config"
+	. "github.com/seatsurfing/seatsurfing/server/util"
 )
 
 type OrganizationRepository struct {
@@ -275,6 +279,26 @@ func (r *OrganizationRepository) ActivateDomain(e *Organization, domain string) 
 	return err
 }
 
+func (r *OrganizationRepository) GetPrimaryDomain(e *Organization) (*Domain, error) {
+	domains, err := r.GetDomains(e)
+	if err != nil {
+		return nil, err
+	}
+	for _, domain := range domains {
+		if domain.Active {
+			if strings.Contains(domain.DomainName, GetConfig().OrgSignupDomain) {
+				return domain, nil
+			}
+		}
+	}
+	for _, domain := range domains {
+		if domain.Active {
+			return domain, nil
+		}
+	}
+	return nil, errors.New("no primary domain found")
+}
+
 func (r *OrganizationRepository) GetDomains(e *Organization) ([]*Domain, error) {
 	var result []*Domain
 	rows, err := GetDatabase().DB().Query("SELECT domain, organization_id, active, verify_token "+
@@ -297,12 +321,11 @@ func (r *OrganizationRepository) GetDomains(e *Organization) ([]*Domain, error) 
 	return result, nil
 }
 
-func (r *OrganizationRepository) IsValidEmailForOrg(email string, org *Organization) bool {
-	mailParts := strings.Split(email, "@")
-	if len(mailParts) != 2 {
+func (r *OrganizationRepository) IsValidCustomDomainForOrg(email string, org *Organization) bool {
+	domain := GetDomainFromEmail(email)
+	if domain == "" {
 		return false
 	}
-	domain := strings.ToLower(mailParts[1])
 	domains, err := GetOrganizationRepository().GetDomains(org)
 	if err != nil {
 		return false
@@ -315,7 +338,6 @@ func (r *OrganizationRepository) IsValidEmailForOrg(email string, org *Organizat
 		}
 	}
 	return false
-
 }
 
 func (r *OrganizationRepository) CreateSampleData(org *Organization) error {
