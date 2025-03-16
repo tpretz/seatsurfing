@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -67,9 +66,8 @@ func ACSSendEmail(host string, accessKey string, r *ACSSendMailRequest) error {
 	}
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
-	fmt.Println("response Body:", string(body))
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return errors.New("invalid status " + res.Status)
+		return fmt.Errorf("could not send mail via ACS, status code = %d, error: %s", res.StatusCode, string(body))
 	}
 	return nil
 }
