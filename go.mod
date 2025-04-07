@@ -1,8 +1,6 @@
 module server
 
-go 1.23.0
-
-toolchain go1.23.8
+go 1.21
 
 require (
 	github.com/go-playground/validator v9.31.0+incompatible
