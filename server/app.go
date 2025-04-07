@@ -68,7 +68,12 @@ func (a *App) InitializeRouter() {
 	}
 	a.Router.Path("/").Methods("GET").HandlerFunc(a.RedirectRootPath)
 	a.Router.PathPrefix("/").Methods("OPTIONS").HandlerFunc(CorsHandler)
+
+	//Add the middleware
 	a.Router.Use(CorsMiddleware)
+	// Add the Auth Rate Limit middleware before the auth verification middleware
+	a.Router.Use(AuthRateLimitMiddleware)
+	// Keep the existing auth middleware
 	a.Router.Use(VerifyAuthMiddleware)
 }
 
@@ -103,6 +108,9 @@ func (a *App) InitializeDefaultOrg() {
 }
 
 func (a *App) InitializeTimers() {
+	// Initialize rate limiter
+	GetRateLimiter()
+
 	GetUpdateChecker().InitializeVersionUpdateTimer()
 	a.CleanupTicker = time.NewTicker(time.Minute * 1)
 	go func() {
