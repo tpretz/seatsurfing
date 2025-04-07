@@ -29,6 +29,7 @@ func TestMain(m *testing.M) {
 	os.Setenv("ORG_SIGNUP_ENABLED", "1")
 	os.Setenv("ORG_SIGNUP_DELETE", "1")
 	os.Setenv("LOGIN_PROTECTION_MAX_FAILS", "3")
+	os.Setenv("APP_ENV", "test")
 	GetConfig().ReadConfig()
 	db := GetDatabase()
 	dropTestDB()

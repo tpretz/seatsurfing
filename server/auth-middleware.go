@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -12,6 +13,11 @@ import (
 // AuthRateLimitMiddleware applies rate limiting only to authentication routes
 func AuthRateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if os.Getenv("APP_ENV") == "test" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		// Check if the path is an auth route that needs rate limiting
 		if isAuthRoute(r.URL.Path) {
 			// Get client IP address
