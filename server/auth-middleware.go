@@ -55,7 +55,7 @@ func AuthRateLimitMiddleware(next http.Handler) http.Handler {
 				// Calculate seconds until reset
 				retryAfter := int(time.Until(limitInfo.ResetTime).Seconds())
 				if retryAfter < 1 {
-					retryAfter = 60 // Default to 60 seconds if calculation is off
+					retryAfter = GetConfig().RateLimitDefaultRetryAfterSeconds //60 seconds
 				}
 
 				w.Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
@@ -73,10 +73,6 @@ func isAuthRoute(path string) bool {
 	// Add all authentication-related paths here
 	authPaths := []string{
 		"/auth/login",
-		/*"/auth/verify/",
-		"/auth/preflight",
-		"/auth/refresh",
-		"/auth/initpwreset",*/
 	}
 
 	for _, authPath := range authPaths {

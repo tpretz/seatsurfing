@@ -141,11 +141,24 @@ var _rateLimiterOnce sync.Once
 // GetRateLimiter returns the singleton rate limiter instance
 func GetRateLimiter() *RateLimiter {
 	_rateLimiterOnce.Do(func() {
+		config := GetConfig()
+		maxRequests := config.RateLimitMaxRequests
+		windowSeconds := config.RateLimitWindowSeconds
+		cleanupIntervalMinutes := config.RateLimitCleanupIntervalMinutes
+
 		// Initialize rate limiter with 5 requests per minute
-		_rateLimiterInstance = NewRateLimiter(5, time.Minute)
+		_rateLimiterInstance = NewRateLimiter(
+			maxRequests,
+			time.Duration(windowSeconds)*time.Second,
+		)
+
 		// Start cleanup task every 5 minutes
-		_rateLimiterInstance.StartCleanupTask(5 * time.Minute)
-		log.Println("Rate limiter initialized with 5 requests per minute limit")
+		_rateLimiterInstance.StartCleanupTask(
+			time.Duration(cleanupIntervalMinutes) * time.Minute,
+		)
+
+		log.Printf("Rate limiter initialized with %d requests per %d seconds limit",
+			maxRequests, windowSeconds)
 	})
 	return _rateLimiterInstance
 }

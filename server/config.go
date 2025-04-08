@@ -43,6 +43,10 @@ type Config struct {
 	LoginProtectionMaxFails             int
 	LoginProtectionSlidingWindowSeconds int
 	LoginProtectionBanMinutes           int
+	RateLimitMaxRequests                int
+	RateLimitWindowSeconds              int
+	RateLimitCleanupIntervalMinutes     int
+	RateLimitDefaultRetryAfterSeconds   int
 }
 
 var _configInstance *Config
@@ -96,6 +100,10 @@ func (c *Config) ReadConfig() {
 	c.LoginProtectionMaxFails = c.getEnvInt("LOGIN_PROTECTION_MAX_FAILS", 10)
 	c.LoginProtectionSlidingWindowSeconds = c.getEnvInt("LOGIN_PROTECTION_SLIDING_WINDOW_SECONDS", 600)
 	c.LoginProtectionBanMinutes = c.getEnvInt("LOGIN_PROTECTION_BAN_MINUTES", 5)
+	c.RateLimitMaxRequests = c.getEnvInt("RATE_LIMIT_MAX_REQUESTS", 5)
+	c.RateLimitWindowSeconds = c.getEnvInt("RATE_LIMIT_WINDOW_SECONDS", 60) // 1 minute
+	c.RateLimitCleanupIntervalMinutes = c.getEnvInt("RATE_LIMIT_CLEANUP_INTERVAL_MINUTES", 5)
+	c.RateLimitDefaultRetryAfterSeconds = c.getEnvInt("RATE_LIMIT_DEFAULT_RETRY_AFTER_SECONDS", 60)
 }
 
 func (c *Config) Print() {
