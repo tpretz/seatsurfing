@@ -220,6 +220,7 @@ func (a *App) Run(publicListenAddr string) {
 	signal.Notify(c, os.Interrupt)
 	<-c
 	log.Println("Shutting down...")
+	ShutdownRateLimiter()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
 	httpServer.Shutdown(ctx)

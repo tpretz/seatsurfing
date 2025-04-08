@@ -2,27 +2,32 @@ package main
 
 import (
 	"log"
-	"net"
-	"net/http"
 	"sync"
 	"time"
 )
 
-// RateLimiter defines a simple rate limiter with a sliding window
+// IPLimitInfo stores rate limit data for a specific IP
+type IPLimitInfo struct {
+	Count    int       // Current count of requests
+	FirstHit time.Time // Time of first request in current window
+	LastHit  time.Time // Time of most recent request (for cleanup)
+}
+
+// RateLimiter defines a counter-based rate limiter with a sliding window
 type RateLimiter struct {
-	mu           sync.Mutex
-	requestCount map[string][]time.Time
-	MaxRequests  int // Made public for easier access
-	windowSize   time.Duration
+	mu          sync.Mutex
+	ipLimits    map[string]*IPLimitInfo
+	MaxRequests int // Made public for easier access
+	windowSize  time.Duration
 }
 
 // NewRateLimiter creates a new rate limiter with the specified maximum requests per window
 func NewRateLimiter(maxRequests int, windowSize time.Duration) *RateLimiter {
 	log.Printf("Creating new rate limiter with max %d requests per %v", maxRequests, windowSize)
 	return &RateLimiter{
-		requestCount: make(map[string][]time.Time),
-		MaxRequests:  maxRequests,
-		windowSize:   windowSize,
+		ipLimits:    make(map[string]*IPLimitInfo),
+		MaxRequests: maxRequests,
+		windowSize:  windowSize,
 	}
 }
 
@@ -47,96 +52,80 @@ func (rl *RateLimiter) GetLimitInfo(ip string) RateLimitInfo {
 
 	now := time.Now()
 
-	// Clean up old requests that are outside the window
-	var validTimestamps []time.Time
-	var oldestTimestamp time.Time
+	// Check if this IP has previous request data
+	limitData, exists := rl.ipLimits[ip]
 
-	if timestamps, ok := rl.requestCount[ip]; ok {
-		for _, t := range timestamps {
-			if now.Sub(t) <= rl.windowSize {
-				validTimestamps = append(validTimestamps, t)
-				if oldestTimestamp.IsZero() || t.Before(oldestTimestamp) {
-					oldestTimestamp = t
-				}
-			}
+	// If no existing data or the window has expired, start a new counter
+	if !exists || now.Sub(limitData.FirstHit) > rl.windowSize {
+		// Create or reset the counter
+		rl.ipLimits[ip] = &IPLimitInfo{
+			Count:    1, // This counts the current request
+			FirstHit: now,
+			LastHit:  now,
 		}
-		rl.requestCount[ip] = validTimestamps
+
+		return RateLimitInfo{
+			Allowed:        true,
+			CurrentCount:   1,
+			RemainingCount: rl.MaxRequests - 1,
+			ResetTime:      now.Add(rl.windowSize),
+		}
 	}
 
-	currentCount := len(validTimestamps)
-	// Check if the current request would be allowed (less than MaxRequests)
-	allowed := currentCount < rl.MaxRequests
+	// Update last hit time for cleanup purposes
+	limitData.LastHit = now
 
-	var resetTime time.Time
-	if !oldestTimestamp.IsZero() {
-		resetTime = oldestTimestamp.Add(rl.windowSize)
-	} else {
-		resetTime = now.Add(rl.windowSize)
-	}
+	// Check if limit is reached
+	allowed := limitData.Count < rl.MaxRequests
 
-	// Add current request timestamp if allowed
+	// Increment counter if allowed
 	if allowed {
-		rl.requestCount[ip] = append(rl.requestCount[ip], now)
-		currentCount++
+		limitData.Count++
 	}
 
 	return RateLimitInfo{
 		Allowed:        allowed,
-		CurrentCount:   currentCount,
-		RemainingCount: rl.MaxRequests - currentCount,
-		ResetTime:      resetTime,
+		CurrentCount:   limitData.Count,
+		RemainingCount: rl.MaxRequests - limitData.Count,
+		ResetTime:      limitData.FirstHit.Add(rl.windowSize),
 	}
 }
 
 // Periodically clean up old entries to prevent memory leaks
-func (rl *RateLimiter) StartCleanupTask(cleanupInterval time.Duration) {
+func (rl *RateLimiter) StartCleanupTask(cleanupInterval time.Duration, done <-chan struct{}) {
 	go func() {
 		ticker := time.NewTicker(cleanupInterval)
 		defer ticker.Stop()
 
-		for range ticker.C {
-			rl.mu.Lock()
-			now := time.Now()
-			for ip, timestamps := range rl.requestCount {
-				var validTimestamps []time.Time
-				for _, t := range timestamps {
-					if now.Sub(t) <= rl.windowSize {
-						validTimestamps = append(validTimestamps, t)
+		for {
+			select {
+			case <-ticker.C:
+				rl.mu.Lock()
+				now := time.Now()
+
+				// Remove IPs that haven't been seen recently
+				for ip, data := range rl.ipLimits {
+					// Remove if last hit was more than window size ago
+					if now.Sub(data.LastHit) > rl.windowSize {
+						delete(rl.ipLimits, ip)
 					}
 				}
-				if len(validTimestamps) == 0 {
-					delete(rl.requestCount, ip)
-				} else {
-					rl.requestCount[ip] = validTimestamps
-				}
+
+				rl.mu.Unlock()
+				log.Println("Rate limiter cleanup completed")
+
+			case <-done:
+				log.Println("Stopping rate limiter cleanup task")
+				return
 			}
-			rl.mu.Unlock()
 		}
 	}()
 }
 
-// RateLimitMiddleware creates middleware to apply rate limiting
-func RateLimitMiddleware(rl *RateLimiter) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				ip = r.RemoteAddr
-			}
-
-			if !rl.Allow(ip) {
-				http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-// Global rate limiter instance
+// Global rate limiter instance and shutdown channel
 var _rateLimiterInstance *RateLimiter
 var _rateLimiterOnce sync.Once
+var _rateLimiterDone chan struct{}
 
 // GetRateLimiter returns the singleton rate limiter instance
 func GetRateLimiter() *RateLimiter {
@@ -146,19 +135,31 @@ func GetRateLimiter() *RateLimiter {
 		windowSeconds := config.RateLimitWindowSeconds
 		cleanupIntervalMinutes := config.RateLimitCleanupIntervalMinutes
 
-		// Initialize rate limiter with 5 requests per minute
+		// Initialize rate limiter with config values
 		_rateLimiterInstance = NewRateLimiter(
 			maxRequests,
 			time.Duration(windowSeconds)*time.Second,
 		)
 
-		// Start cleanup task every 5 minutes
+		// Create done channel for cleanup task
+		_rateLimiterDone = make(chan struct{})
+
+		// Start cleanup task with done channel
 		_rateLimiterInstance.StartCleanupTask(
-			time.Duration(cleanupIntervalMinutes) * time.Minute,
+			time.Duration(cleanupIntervalMinutes)*time.Minute,
+			_rateLimiterDone,
 		)
 
 		log.Printf("Rate limiter initialized with %d requests per %d seconds limit",
 			maxRequests, windowSeconds)
 	})
 	return _rateLimiterInstance
+}
+
+// ShutdownRateLimiter sends signal to stop the cleanup goroutine
+func ShutdownRateLimiter() {
+	if _rateLimiterDone != nil {
+		close(_rateLimiterDone)
+		log.Println("Rate limiter shutdown signal sent")
+	}
 }
