@@ -98,6 +98,7 @@
     "administration": "Administration",
     "datePickerFormat": "dd-MM-y HH:mm",
     "datePickerFormatDailyBasisBooking": "dd-MM-y",
+    
     "today": "Today",
     "tomorrow": "Tomorrow",
     "inXdays": "In {{x}} days",
