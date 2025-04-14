@@ -171,19 +171,28 @@ class Search extends React.Component<Props, State> {
 
   initDates = () => {
     let enter = new Date();
+    const now = new Date();
+    
     if (this.state.prefEnterTime === Search.PreferenceEnterTimeNow) {
-      enter.setHours(enter.getHours() + 1, 0, 0);
+      // If preference is set to start now, set to current hour + 1
+      enter.setHours(enter.getHours() + 1, 0, 0, 0);
+      
+      // If current time is before workday start, set to workday start
       if (enter.getHours() < this.state.prefWorkdayStart) {
         enter.setHours(this.state.prefWorkdayStart, 0, 0, 0);
       }
+      
+      // If current time is after workday end, set to next day's workday start
       if (enter.getHours() >= this.state.prefWorkdayEnd) {
         enter.setDate(enter.getDate() + 1);
         enter.setHours(this.state.prefWorkdayStart, 0, 0, 0);
       }
     } else if (this.state.prefEnterTime === Search.PreferenceEnterTimeNextDay) {
+      // For next day, always set to workday start
       enter.setDate(enter.getDate() + 1);
       enter.setHours(this.state.prefWorkdayStart, 0, 0, 0);
     } else if (this.state.prefEnterTime === Search.PreferenceEnterTimeNextWorkday) {
+      // Find next workday
       enter.setDate(enter.getDate() + 1);
       let add = 0;
       let nextDayFound = false;
@@ -202,21 +211,22 @@ class Search extends React.Component<Props, State> {
       enter.setDate(enter.getDate() + add);
       enter.setHours(this.state.prefWorkdayStart, 0, 0, 0);
     }
-
+  
+    // Set leave time - always use 17:30 for end time
     let leave = new Date(enter);
-    leave.setHours(this.state.prefWorkdayEnd, 0, 0);
-
+    leave.setHours(this.state.prefWorkdayEnd, 30, 0, 0);
+  
     if (RuntimeConfig.INFOS.dailyBasisBooking) {
       enter.setHours(0, 0, 0, 0);
       leave.setHours(23, 59, 59, 0);
     }
-
+  
     this.setState({
       enter: enter,
       leave: leave
     });
   }
-
+  
   loadLocations = async (): Promise<void> => {
     return Location.list().then(list => {
       this.locations = list;
@@ -331,22 +341,94 @@ class Search extends React.Component<Props, State> {
         }
       });
     };
+    
     let performChange = () => {
-      let diff = this.state.leave.getTime() - this.state.enter.getTime();
       let date = (value instanceof Date) ? value : value[0];
       if (date == null) {
         return;
       }
-      if (RuntimeConfig.INFOS.dailyBasisBooking) {
-        date.setHours(0, 0, 0);
+  
+      // Create today's date at midnight for comparison
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Create selected date at midnight for comparison
+      const selectedDate = new Date(date);
+      selectedDate.setHours(0, 0, 0, 0);
+      
+      // Check if the selected date is today
+      const isToday = selectedDate.getTime() === today.getTime();
+      
+      // Store original selected hours for checking if user manually changed time
+      const originalHours = date.getHours();
+      const originalMinutes = date.getMinutes();
+      
+      if (isToday) {
+        // For today, use current hour (or workday start if we're outside working hours)
+        const now = new Date();
+        
+        if (now.getHours() < this.state.prefWorkdayStart) {
+          // If current time is before workday start, set to workday start
+          date.setHours(this.state.prefWorkdayStart, 0, 0, 0);
+        } else if (now.getHours() >= this.state.prefWorkdayEnd) {
+          // If current time is after workday end, set to next day's workday start
+          date.setDate(date.getDate() + 1);
+          date.setHours(this.state.prefWorkdayStart, 0, 0, 0);
+        } else {
+          // Use current hour (rounded up)
+          date.setHours(now.getHours() + 1, 0, 0, 0);
+        }
+      } else {
+        // For future dates, determine if user intentionally changed the time
+        // Only reset to workday start on initial selection, not when manually adjusting time
+        const userChangedTime = 
+          (this.state.enter.getDate() === date.getDate() && 
+           this.state.enter.getMonth() === date.getMonth() && 
+           this.state.enter.getFullYear() === date.getFullYear());
+           
+        if (!userChangedTime) {
+          // Initial selection of this date - set to default workday start
+          date.setHours(this.state.prefWorkdayStart, 0, 0, 0);
+        } else {
+          // User is adjusting time on an already selected date - preserve their selection
+          date.setHours(originalHours, originalMinutes, 0, 0);
+        }
       }
-      let leave = new Date();
-      leave.setTime(date.getTime() + diff);
+      
+      if (RuntimeConfig.INFOS.dailyBasisBooking) {
+        date.setHours(0, 0, 0, 0);
+      }
+      
+      // Calculate leave time based on whether it's today or a future date
+      let leave: Date;
+      
+      if (isToday && !RuntimeConfig.INFOS.dailyBasisBooking) {
+        // For today, maintain the same duration if possible
+        const durationMs = this.state.leave.getTime() - this.state.enter.getTime();
+        leave = new Date(date.getTime() + durationMs);
+        
+        // Make sure leave time isn't after workday end
+        if (leave.getHours() > this.state.prefWorkdayEnd || 
+           (leave.getHours() === this.state.prefWorkdayEnd && leave.getMinutes() > 30)) {
+          leave = new Date(date);
+          leave.setHours(this.state.prefWorkdayEnd, 30, 0, 0);
+        }
+      } else {
+        // For future dates, set leave to workday end (17:30)
+        leave = new Date(date);
+        leave.setHours(this.state.prefWorkdayEnd, 30, 0, 0);
+        
+        if (RuntimeConfig.INFOS.dailyBasisBooking) {
+          leave.setHours(23, 59, 59, 0);
+        }
+      }
+      
       this.setState({
         enter: date,
         leave: leave
       }, () => dateChangedCb());
     };
+    
     if (typeof window !== 'undefined') {
       window.clearTimeout(this.enterChangeTimer);
       this.enterChangeTimer = window.setTimeout(performChange, 1000);
