@@ -28,7 +28,6 @@ export default class Ajax {
   }
 
   static async query(method: string, url: string, data?: any): Promise<AjaxResult> {
-    console.log("AJAX request for: " + url);
     url = Ajax.getBackendUrl() + url;
     return new Promise<AjaxResult>(function (resolve, reject) {
       let performRequest = () => {
@@ -71,7 +70,6 @@ export default class Ajax {
           resolve(Ajax.CREDENTIALS);
         } else {
           // Refresh the token
-          console.log("Performing access token refresh with refresh token: " + refreshToken);
           let data = {
             "refreshToken": refreshToken
           };
@@ -83,7 +81,8 @@ export default class Ajax {
                 let c: AjaxCredentials = {
                   accessToken: json.accessToken,
                   refreshToken: json.refreshToken,
-                  accessTokenExpiry: new Date(new Date().getTime() + Ajax.ACCESS_TOKEN_EXPIRY_OFFSET)
+                  accessTokenExpiry: new Date(new Date().getTime() + Ajax.ACCESS_TOKEN_EXPIRY_OFFSET),
+                  logoutUrl: json.logoutUrl
                 };
                 Ajax.CREDENTIALS = c;
                 Ajax.PERSISTER.updateCredentialsSessionStorage(c).then(() => {

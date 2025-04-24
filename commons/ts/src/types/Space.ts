@@ -2,6 +2,9 @@ import { Entity } from "./Entity";
 import Ajax from "../util/Ajax";
 import Location from "./Location";
 import Formatting from "../util/Formatting";
+import BulkUpdateResponse from "./BulkUpdateResponse";
+import SpaceAttributeValue from "./SpaceAttributeValue";
+import SearchAttribute from "./SearchAttribute";
 
 export default class Space extends Entity {
     name: string;
@@ -10,6 +13,7 @@ export default class Space extends Entity {
     width: number;
     height: number;
     rotation: number;
+    attributes: SpaceAttributeValue[];
     available: boolean;
     locationId: string;
     location: Location;
@@ -23,6 +27,7 @@ export default class Space extends Entity {
         this.width = 0;
         this.height = 0;
         this.rotation = 0;
+        this.attributes = [];
         this.available = false;
         this.locationId = "";
         this.location = new Location();
@@ -37,6 +42,7 @@ export default class Space extends Entity {
             "width": this.width,
             "height": this.height,
             "rotation": this.rotation,
+            "attributes": this.attributes.map(a => a.serialize()),
         });
     }
 
@@ -57,6 +63,13 @@ export default class Space extends Entity {
         }
         if (input.bookings && Array.isArray(input.bookings)) {
             this.rawBookings = input.bookings;
+        }
+        if (input.attributes) {
+            this.attributes = input.attributes.map((a: any) => {
+                let e = new SpaceAttributeValue();
+                e.deserialize(a);
+                return e;
+            });
         }
     }
 
@@ -92,10 +105,11 @@ export default class Space extends Entity {
         });
     }
 
-    static async listAvailability(locationId: string, enter: Date, leave: Date): Promise<Space[]> {
+    static async listAvailability(locationId: string, enter: Date, leave: Date, attributes?: SearchAttribute[]): Promise<Space[]> {
         let payload = {
             enter: Formatting.convertToFakeUTCDate(enter).toISOString(),
-            leave: Formatting.convertToFakeUTCDate(leave).toISOString()
+            leave: Formatting.convertToFakeUTCDate(leave).toISOString(),
+            attributes: (attributes ? attributes.map(a => a.serialize()) : [])
         };
         return Ajax.postData("/location/"+locationId+"/space/availability", payload).then(result => {
             let list: Space[] = [];
@@ -105,6 +119,19 @@ export default class Space extends Entity {
                 list.push(e);
             });
             return list;
+        });
+    }
+
+    static async bulkUpdate(locationId: string, creates: Space[], updates: Space[], deleteIds: string[]): Promise<BulkUpdateResponse> {
+        let payload = {
+            creates: creates,
+            updates: updates,
+            deleteIds: deleteIds
+        };
+        return Ajax.postData("/location/"+locationId+"/space/bulk", payload).then(result => {
+            let e = new BulkUpdateResponse();
+            e.deserialize(result);
+            return e;
         });
     }
 }

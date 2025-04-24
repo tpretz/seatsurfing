@@ -1,5 +1,5 @@
 import React from 'react';
-import { Ajax, Booking, Formatting } from 'flexspace-commons';
+import {Ajax, AjaxError, Booking, Formatting} from 'seatsurfing-commons';
 import Loading from '../components/Loading';
 import { Button, Form, ListGroup, Modal } from 'react-bootstrap';
 import { LogIn as IconEnter, LogOut as IconLeave, MapPin as IconLocation } from 'react-feather';
@@ -8,9 +8,12 @@ import { NextRouter } from 'next/router';
 import NavBar from '@/components/NavBar';
 import withReadyRouter from '@/components/withReadyRouter';
 import RuntimeConfig from '@/components/RuntimeConfig';
+import ErrorText from '@/types/ErrorText';
+import { Loader as IconLoad } from 'react-feather';
 
 interface State {
   loading: boolean
+  deletingItem: boolean
   selectedItem: Booking | null
 }
 
@@ -26,6 +29,7 @@ class Bookings extends React.Component<Props, State> {
     this.data = [];
     this.state = {
       loading: true,
+      deletingItem: false,
       selectedItem: null
     };
   }
@@ -51,11 +55,24 @@ class Bookings extends React.Component<Props, State> {
 
   cancelBooking = (item: Booking | null) => {
     this.setState({
-      loading: true
+      deletingItem: true
     });
     this.state.selectedItem?.delete().then(() => {
       this.setState({
         selectedItem: null,
+        deletingItem: false,
+        loading: true,
+      }, this.loadData);
+    }, (reason: any) => {
+      if (reason instanceof AjaxError && reason.httpStatusCode === 403) {
+          window.alert(ErrorText.getTextForAppCode(reason.appErrorCode, this.props.t));
+        } else {
+          window.alert(this.props.t("errorDeleteBooking"));
+        }
+      this.setState({
+        selectedItem: null,
+        deletingItem: false,
+        loading: true,
       }, this.loadData);
     });
   }
@@ -115,11 +132,12 @@ class Bookings extends React.Component<Props, State> {
             <p>{this.props.t("confirmCancelBooking", { enter: formatter.format(this.state.selectedItem?.enter), interpolation: { escapeValue: false } })}</p>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => this.setState({ selectedItem: null })}>
+            <Button variant="secondary" onClick={() => this.setState({ selectedItem: null })} disabled={this.state.deletingItem}>
               {this.props.t("back")}
             </Button>
-            <Button variant="danger" onClick={() => this.cancelBooking(this.state.selectedItem)}>
+            <Button variant="danger" onClick={() => this.cancelBooking(this.state.selectedItem)} disabled={this.state.deletingItem}>
               {this.props.t("cancelBooking")}
+              {this.state.deletingItem ? <IconLoad className="feather loader" style={{marginLeft: '5px'}} /> : <></>}
             </Button>
           </Modal.Footer>
         </Modal>

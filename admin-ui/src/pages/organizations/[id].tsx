@@ -1,7 +1,7 @@
 import React from 'react';
 import { Form, Col, Row, Button, Alert, InputGroup } from 'react-bootstrap';
 import { ChevronLeft as IconBack, Save as IconSave, Trash2 as IconDelete } from 'react-feather';
-import { Ajax, Domain, Organization, User } from 'flexspace-commons';
+import { Ajax, Domain, Organization, User } from 'seatsurfing-commons';
 import { NextRouter } from 'next/router';
 import { WithTranslation, withTranslation } from 'next-i18next';
 import FullLayout from '@/components/FullLayout';
@@ -19,7 +19,6 @@ interface State {
   firstname: string
   lastname: string
   email: string
-  country: string
   language: string
   domain: string
   password: string
@@ -44,7 +43,6 @@ class EditOrganization extends React.Component<Props, State> {
       firstname: "",
       lastname: "",
       email: "",
-      country: "DE",
       language: "de",
       domain: "",
       password: "",
@@ -69,7 +67,6 @@ class EditOrganization extends React.Component<Props, State> {
           firstname: org.contactFirstname,
           lastname: org.contactLastname,
           email: org.contactEmail,
-          country: org.country,
           language: org.language,
           loading: false,
         });
@@ -89,21 +86,17 @@ class EditOrganization extends React.Component<Props, State> {
     this.entity.contactFirstname = this.state.firstname;
     this.entity.contactLastname = this.state.lastname;
     this.entity.contactEmail = this.state.email;
-    this.entity.country = this.state.country;
     this.entity.language = this.state.language;
     let createUser = (!this.entity.id);
     this.entity.save().then(() => {
-      console.log("org saved, id = " + this.entity.id);
       if (createUser) {
         Domain.add(this.entity.id, this.state.domain).then(() => {
-          console.log("domain added");
           let user = new User();
           user.organizationId = this.entity.id;
-          user.email = "admin@" + this.state.domain;
+          user.email = this.state.email;
           user.password = this.state.password;
           user.requirePassword = true;
-          user.admin = true;
-          user.superAdmin = false;
+          user.role = 20;
           user.save().then(() => {
             this.props.router.push("/organizations/" + this.entity.id);
             this.setState({ saved: true });
@@ -158,24 +151,24 @@ class EditOrganization extends React.Component<Props, State> {
       buttons = <>{backButton} {buttonSave}</>;
     }
 
-    let countries = ["BE", "BG", "DK", "DE", "EE", "FJ", "FR", "GR", "IE", "IT", "HR", "LV", "LT", "LU", "MT", "NL", "AT", "PL", "PT", "RO", "SE", "SK", "SI", "ES", "CY", "CZ", "HU"];
-    let languages = ["de", "en"];
+    let countries = ["BE", "BG", "DK", "DE", "EE", "FJ", "FR", "GR", "IE", "IL", "IT", "HR", "LV", "LT", "LU", "MT", "NL", "AT", "PL", "PT", "RO", "SE", "SK", "SI", "ES", "CY", "CZ", "HU"];
+    let languages = ["de", "en", "he"];
 
     let adminSection = <></>;
     if (!this.entity.id) {
       adminSection = (
         <>
           <Form.Group as={Row}>
-            <Form.Label column sm="6" className="lead text-uppercase">{this.props.t("admin")}</Form.Label>
+            <Form.Label column sm="6" className="lead text-uppercase">{this.props.t("domain")}</Form.Label>
           </Form.Group>
           <Form.Group as={Row}>
             <Form.Label column sm="2">{this.props.t("domain")}</Form.Label>
             <Col sm="4">
-              <InputGroup>
-                <Form.Control plaintext={true} readOnly={true} defaultValue="admin@" />
-                <Form.Control type="text" placeholder={this.props.t("yourDomainPlaceholder")} value={this.state.domain} onChange={(e: any) => this.setState({ domain: e.target.value })} required={true} />
-              </InputGroup>
+              <Form.Control type="text" placeholder={this.props.t("yourDomainPlaceholder")} value={this.state.domain} onChange={(e: any) => this.setState({ domain: e.target.value })} required={true} />
             </Col>
+          </Form.Group>
+          <Form.Group as={Row}>
+            <Form.Label column sm="6" className="lead text-uppercase">{this.props.t("admin")}</Form.Label>
           </Form.Group>
           <Form.Group as={Row}>
             <Form.Label column sm="2">{this.props.t("password")}</Form.Label>
@@ -198,19 +191,11 @@ class EditOrganization extends React.Component<Props, State> {
             </Col>
           </Form.Group>
           <Form.Group as={Row}>
-            <Form.Label column sm="2">{this.props.t("country")}</Form.Label>
-            <Col sm="4">
-              <Form.Control as="select" value={this.state.country} onChange={(e: any) => this.setState({ country: e.target.value })} required={true}>
-                {countries.map(cc => <option key={cc}>{cc}</option>)}
-              </Form.Control>
-            </Col>
-          </Form.Group>
-          <Form.Group as={Row}>
             <Form.Label column sm="2">{this.props.t("language")}</Form.Label>
             <Col sm="4">
-              <Form.Control as="select" value={this.state.language} onChange={(e: any) => this.setState({ language: e.target.value })} required={true}>
+              <Form.Select value={this.state.language} onChange={(e: any) => this.setState({ language: e.target.value })} required={true}>
                 {languages.map(lc => <option key={lc}>{lc}</option>)}
-              </Form.Control>
+              </Form.Select>
             </Col>
           </Form.Group>
           <Form.Group as={Row}>

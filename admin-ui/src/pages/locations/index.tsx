@@ -1,7 +1,7 @@
 import React from 'react';
 import { Table } from 'react-bootstrap';
-import { Plus as IconPlus, Download as IconDownload } from 'react-feather';
-import { Ajax, Location } from 'flexspace-commons';
+import { Plus as IconPlus, Download as IconDownload, Tag as IconTag } from 'react-feather';
+import { Ajax, Location } from 'seatsurfing-commons';
 import { WithTranslation, withTranslation } from 'next-i18next';
 import FullLayout from '@/components/FullLayout';
 import { NextRouter } from 'next/router';
@@ -54,7 +54,9 @@ class Locations extends React.Component<Props, State> {
     return (
       <tr key={location.id} onClick={() => this.onItemSelect(location)}>
         <td>{location.name}</td>
+        <td>{location.enabled ? this.props.t('yes') : ''}</td>
         <td>{location.mapWidth}x{location.mapHeight}</td>
+        <td>{window.location.origin}/ui/search?lid={location.id}</td>
       </tr>
     );
   }
@@ -77,6 +79,7 @@ class Locations extends React.Component<Props, State> {
     let buttons = (
       <>
         {this.data && this.data.length > 0 ? downloadButton : <></>}
+        <Link href="/attributes" className="btn btn-sm btn-outline-secondary"><IconTag className="feather" /> {this.props.t("attributes")}</Link>
         <Link href="/locations/add" className="btn btn-sm btn-outline-secondary"><IconPlus className="feather" /> {this.props.t("add")}</Link>
       </>
     );
@@ -103,7 +106,9 @@ class Locations extends React.Component<Props, State> {
           <thead>
             <tr>
               <th>{this.props.t("name")}</th>
+              <th>{this.props.t("enabled")}</th>
               <th>{this.props.t("map")}</th>
+              <th>{this.props.t("bookingLink")}</th>
             </tr>
           </thead>
           <tbody>

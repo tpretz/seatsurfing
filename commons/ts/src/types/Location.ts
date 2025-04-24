@@ -1,11 +1,13 @@
 import { Entity } from "./Entity";
 import Ajax from "../util/Ajax";
+import SpaceAttributeValue from "./SpaceAttributeValue";
 
 export default class Location extends Entity {
     name: string;
     description: string;
     maxConcurrentBookings: number;
     timezone: string;
+    enabled: boolean;
     mapWidth: number;
 	mapHeight: number;
 	mapMimeType: string;
@@ -16,6 +18,7 @@ export default class Location extends Entity {
         this.description = "";
         this.maxConcurrentBookings = 0;
         this.timezone = "";
+        this.enabled = true;
         this.mapWidth = 0;
 	    this.mapHeight = 0;
 	    this.mapMimeType = "";
@@ -27,6 +30,7 @@ export default class Location extends Entity {
             "description": this.description,
             "maxConcurrentBookings": this.maxConcurrentBookings,
             "timezone": this.timezone,
+            "enabled": this.enabled,
         });
     }
 
@@ -36,6 +40,7 @@ export default class Location extends Entity {
         this.description = input.description;
         this.maxConcurrentBookings = input.maxConcurrentBookings;
         this.timezone = input.timezone;
+        this.enabled = input.enabled;
         this.mapWidth = input.mapWidth;
         this.mapHeight = input.mapHeight;
         this.mapMimeType = input.mapMimeType;
@@ -70,6 +75,29 @@ export default class Location extends Entity {
 
     async setMap(file: File): Promise<void> {
         return Ajax.postData(this.getBackendUrl() + this.id + "/map", file).then(() => undefined);
+    }
+
+    async getAttributes(): Promise<SpaceAttributeValue[]> {
+        return Ajax.get(this.getBackendUrl() + this.id + "/attribute").then(result => {
+            let list: SpaceAttributeValue[] = [];
+            (result.json as []).forEach(item => {
+                let e: SpaceAttributeValue = new SpaceAttributeValue();
+                e.deserialize(item);
+                list.push(e);
+            });
+            return list;
+        });
+    }
+
+    async setAttribute(attributeId: string, value: string): Promise<void> {
+        let payload = {
+            value: value
+        };
+        return Ajax.postData(this.getBackendUrl() + this.id + "/attribute/" + attributeId, payload).then(() => undefined);
+    }
+
+    async deleteAttribute(attributeId: string): Promise<void> {
+        return Ajax.delete(this.getBackendUrl() + this.id + "/attribute/" + attributeId).then(() => undefined);
     }
 
     static async get(id: string): Promise<Location> {

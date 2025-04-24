@@ -1,7 +1,7 @@
 import React from 'react';
 import { Form, Col, Row, Button, Alert, ButtonGroup } from 'react-bootstrap';
 import { ChevronLeft as IconBack, Save as IconSave, Trash2 as IconDelete } from 'react-feather';
-import { Ajax, AuthProvider } from 'flexspace-commons';
+import { Ajax, AuthProvider } from 'seatsurfing-commons';
 import { WithTranslation, withTranslation } from 'next-i18next';
 import { NextRouter } from 'next/router';
 import FullLayout from '@/components/FullLayout';
@@ -24,6 +24,7 @@ interface State {
   userInfoEmailField: string;
   clientId: string;
   clientSecret: string;
+  logoutUrl: string;
 }
 
 interface Props extends WithTranslation {
@@ -49,7 +50,8 @@ class EditAuthProvider extends React.Component<Props, State> {
       userInfoUrl: "",
       userInfoEmailField: "",
       clientId: "",
-      clientSecret: ""
+      clientSecret: "",
+      logoutUrl: "",
     };
   }
 
@@ -77,6 +79,7 @@ class EditAuthProvider extends React.Component<Props, State> {
           userInfoEmailField: authProvider.userInfoEmailField,
           clientId: authProvider.clientId,
           clientSecret: authProvider.clientSecret,
+          logoutUrl: authProvider.logoutUrl,
           loading: false
         });
       });
@@ -99,6 +102,7 @@ class EditAuthProvider extends React.Component<Props, State> {
     this.entity.userInfoEmailField = this.state.userInfoEmailField;
     this.entity.clientId = this.state.clientId;
     this.entity.clientSecret = this.state.clientSecret;
+    this.entity.logoutUrl = this.state.logoutUrl;
     this.entity.save().then(() => {
       this.props.router.push("/settings/auth-providers/" + this.entity.id);
       this.setState({
@@ -124,7 +128,8 @@ class EditAuthProvider extends React.Component<Props, State> {
       authStyle: 1,
       scopes: "https://www.googleapis.com/auth/userinfo.email",
       userInfoUrl: "https://www.googleapis.com/oauth2/v3/userinfo",
-      userInfoEmailField: "email"
+      userInfoEmailField: "email",
+      logoutUrl: ""
     });
   }
 
@@ -137,7 +142,8 @@ class EditAuthProvider extends React.Component<Props, State> {
       authStyle: 1,
       scopes: "openid,email",
       userInfoUrl: "https://graph.microsoft.com/oidc/userinfo",
-      userInfoEmailField: "email"
+      userInfoEmailField: "email",
+      logoutUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/logout?post_logout_redirect_uri={logoutRedirectUri}"
     });
   }
 
@@ -150,7 +156,22 @@ class EditAuthProvider extends React.Component<Props, State> {
       authStyle: 1,
       scopes: "openid,email",
       userInfoUrl: "https://keycloakhost.sample/auth/realms/master/protocol/openid-connect/userinfo",
-      userInfoEmailField: "email"
+      userInfoEmailField: "email",
+      logoutUrl: "https://keycloakhost.sample/auth/realms/master/protocol/openid-connect/logout?post_logout_redirect_uri={logoutRedirectUri}"
+    });
+  }
+
+  templateOkta = () => {
+    this.setState({
+      name: "Okta",
+      providerType: 1,
+      authUrl: "https://tenantname.okta.com/oauth2/default/v1/authorize",
+      tokenUrl: "https://tenantname.okta.com/oauth2/default/v1/token",
+      authStyle: 1,
+      scopes: "openid,email",
+      userInfoUrl: "https://tenantname.okta.com/oauth2/default/v1/userinfo",
+      userInfoEmailField: "email",
+      logoutUrl: "https://tenantname.okta.com/oauth2/default/v1/logout?post_logout_redirect_uri={logoutRedirectUri}"
     });
   }
 
@@ -205,10 +226,10 @@ class EditAuthProvider extends React.Component<Props, State> {
           <Form.Group as={Row}>
             <Form.Label column sm="2">{this.props.t("type")}</Form.Label>
             <Col sm="9">
-              <Form.Control as="select" value={this.state.providerType} onChange={(e: any) => this.setState({ providerType: parseInt(e.target.value) })} required={true}>
+              <Form.Select value={this.state.providerType} onChange={(e: any) => this.setState({ providerType: parseInt(e.target.value) })} required={true}>
                 <option value="0">({this.props.t("pleaseSelect")})</option>
                 <option value="1">OAuth 2</option>
-              </Form.Control>
+              </Form.Select>
             </Col>
           </Form.Group>
           <Form.Group as={Row}>
@@ -226,11 +247,11 @@ class EditAuthProvider extends React.Component<Props, State> {
           <Form.Group as={Row}>
             <Form.Label column sm="2">Auth Style</Form.Label>
             <Col sm="9">
-              <Form.Control as="select" value={this.state.authStyle} onChange={(e: any) => this.setState({ authStyle: parseInt(e.target.value) })} required={true}>
+              <Form.Select value={this.state.authStyle} onChange={(e: any) => this.setState({ authStyle: parseInt(e.target.value) })} required={true}>
                 <option value="0">{this.props.t("automatic")}</option>
                 <option value="1">Parameter (HTTP POST body)</option>
                 <option value="2">Header (HTTP Basic Authorization)</option>
-              </Form.Control>
+              </Form.Select>
             </Col>
           </Form.Group>
           <Form.Group as={Row}>
@@ -263,14 +284,21 @@ class EditAuthProvider extends React.Component<Props, State> {
               <Form.Control type="text" placeholder="email" value={this.state.userInfoEmailField} onChange={(e: any) => this.setState({ userInfoEmailField: e.target.value })} required={true} />
             </Col>
           </Form.Group>
-          {urlInfo}
           <Form.Group as={Row}>
+            <Form.Label column sm="2">Logout URL</Form.Label>
+            <Col sm="9">
+              <Form.Control type="url" placeholder="https://..." value={this.state.logoutUrl} onChange={(e: any) => this.setState({ logoutUrl: e.target.value })} />
+            </Col>
+          </Form.Group>
+          {urlInfo}
+          <Form.Group as={Row} hidden={this.entity.id !== ''}>
             <Form.Label column sm="2">{this.props.t("templates")}</Form.Label>
             <Col sm="9">
               <ButtonGroup>
                 <Button variant="outline-secondary" onClick={this.templateGoogle}>Google</Button>
                 <Button variant="outline-secondary" onClick={this.templateMicrosoft}>Microsoft</Button>
                 <Button variant="outline-secondary" onClick={this.templateKeycloak}>Keycloak</Button>
+                <Button variant="outline-secondary" onClick={this.templateOkta}>Okta</Button>
               </ButtonGroup>
             </Col>
           </Form.Group>

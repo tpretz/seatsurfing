@@ -3,22 +3,11 @@ package main
 import (
 	"log"
 	"os"
-	"path/filepath"
+
+	. "github.com/seatsurfing/seatsurfing/server/app"
+	. "github.com/seatsurfing/seatsurfing/server/repository"
+	. "github.com/seatsurfing/seatsurfing/server/util"
 )
-
-var _productVersion = ""
-
-func GetProductVersion() string {
-	if _productVersion == "" {
-		path, _ := filepath.Abs("./res/version.txt")
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return "UNKNOWN"
-		}
-		_productVersion = string(data)
-	}
-	return _productVersion
-}
 
 func main() {
 	log.Println("Starting...")
@@ -27,12 +16,10 @@ func main() {
 	a := GetApp()
 	a.InitializeDatabases()
 	a.InitializeDefaultOrg()
+	a.InitializePlugins()
 	a.InitializeRouter()
 	a.InitializeTimers()
-	if GetConfig().PrintConfig {
-		GetConfig().Print()
-	}
-	a.Run(GetConfig().PublicListenAddr)
+	a.Run()
 	db.Close()
 	os.Exit(0)
 }

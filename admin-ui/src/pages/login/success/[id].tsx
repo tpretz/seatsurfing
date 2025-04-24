@@ -1,10 +1,11 @@
 import React from 'react';
 import Loading from '../../../components/Loading';
 import { Form } from 'react-bootstrap';
-import { Ajax, JwtDecoder, User } from 'flexspace-commons';
+import { Ajax, JwtDecoder, User } from 'seatsurfing-commons';
 import { NextRouter } from 'next/router';
 import { WithTranslation, withTranslation } from 'next-i18next';
 import withReadyRouter from '@/components/withReadyRouter';
+import RuntimeConfig from '@/components/RuntimeConfig';
 
 interface State {
   redirect: string | null
@@ -41,14 +42,17 @@ class LoginSuccess extends React.Component<Props, State> {
           Ajax.CREDENTIALS = {
             accessToken: res.json.accessToken,
             refreshToken: res.json.refreshToken,
-            accessTokenExpiry: new Date(new Date().getTime() + Ajax.ACCESS_TOKEN_EXPIRY_OFFSET)
+            accessTokenExpiry: new Date(new Date().getTime() + Ajax.ACCESS_TOKEN_EXPIRY_OFFSET),
+            logoutUrl: res.json.logoutUrl,
           };
           if (res.json.longLived) {
             Ajax.PERSISTER.persistRefreshTokenInLocalStorage(Ajax.CREDENTIALS);
           }
           Ajax.PERSISTER.updateCredentialsSessionStorage(Ajax.CREDENTIALS).then(() => {
-            this.setState({
-              redirect: "/dashboard"
+            RuntimeConfig.loadUserAndSettings().then(() => {
+              this.setState({
+                redirect: "/dashboard"
+              });
             });
           });
         } else {

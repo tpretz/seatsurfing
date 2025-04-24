@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navbar, Nav, Modal, Button, Form, Badge, Container, NavLink } from 'react-bootstrap';
-import { Ajax, User, MergeRequest, AjaxCredentials } from 'flexspace-commons';
+import { Ajax, User, MergeRequest, AjaxCredentials } from 'seatsurfing-commons';
 import RuntimeConfig from './RuntimeConfig';
 import { Users as IconMerge, Bell as IconAlert, Settings as IconSettings, Calendar as IconCalendar, PlusSquare as IconPlus } from 'react-feather';
 import { WithTranslation, withTranslation } from 'next-i18next';
@@ -41,6 +41,9 @@ class NavBar extends React.Component<Props, State> {
     }
 
     componentDidMount = () => {
+        if (!Ajax.CREDENTIALS.accessToken) {
+            return;
+        }
         this.loadData();
     }
 
@@ -60,8 +63,13 @@ class NavBar extends React.Component<Props, State> {
 
     logOut = (e: any) => {
         e.preventDefault();
+        let logoutUrl = Ajax.CREDENTIALS.logoutUrl;
         Ajax.CREDENTIALS = new AjaxCredentials();
         Ajax.PERSISTER.deleteCredentialsFromSessionStorage().then(() => {
+            if (logoutUrl) {
+                window.location.href = logoutUrl;
+                return;
+            }
             this.setState({
                 redirect: "/login"
             });
@@ -100,7 +108,7 @@ class NavBar extends React.Component<Props, State> {
 
     openWebUI = () => {
         if (typeof window !== 'undefined') {
-            window.open(process.env.PUBLIC_URL);
+            window.open(window.location.href);
         }
     }
 
@@ -135,7 +143,7 @@ class NavBar extends React.Component<Props, State> {
         let mergeRequestsButton = <></>;
         let collapsable = <></>;
         let buddies = <></>;
-        
+
         if (!RuntimeConfig.EMBEDDED) {
             if (this.state.allowAdmin) {
                 adminButton = <Nav.Link onClick={this.gotoAdmin}>{this.props.t("administration")}</Nav.Link>;
@@ -150,7 +158,7 @@ class NavBar extends React.Component<Props, State> {
             }
         }
 
-        if (RuntimeConfig.INFOS.showNames) {
+        if (RuntimeConfig.INFOS.showNames && !RuntimeConfig.INFOS.disableBuddies) {
             buddies = <Nav.Link as={Link} eventKey="/buddies" href="/buddies">{RuntimeConfig.EMBEDDED ? <IconCalendar className="feather feather-lg" /> : this.props.t("myBuddies")}</Nav.Link>
         }
 
@@ -182,11 +190,14 @@ class NavBar extends React.Component<Props, State> {
             );
         }
 
+
+        const logoUrl = RuntimeConfig.INFOS.customLogoUrl || "/ui/seatsurfing.svg";
+
         return (
             <>
                 <Navbar bg="light" variant="light" fixed="top" expand={RuntimeConfig.EMBEDDED ? true : "xl"}>
                     <Container fluid={true}>
-                        <Navbar.Brand as={NavLink} to="/search"><img src="/ui/seatsurfing.svg" alt="Seatsurfing" /></Navbar.Brand>
+                        <Navbar.Brand as={NavLink} to="/search"><img src={logoUrl} alt="Seatsurfing" /></Navbar.Brand>
                         {collapsable}
                     </Container>
                 </Navbar>

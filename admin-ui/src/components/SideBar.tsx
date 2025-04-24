@@ -1,16 +1,15 @@
 import React from 'react';
-import { Home as IconHome, Users as IconUsers, Map as IconMap, Book as IconBook, Settings as IconSettings, Box as IconBox, Activity as IconAnalysis, ExternalLink as IconExternalLink } from 'react-feather';
-import { Ajax, AjaxCredentials, User } from 'flexspace-commons';
+import { Home as IconHome, Users as IconUsers, Map as IconMap, Book as IconBook, Settings as IconSettings, Box as IconBox, Activity as IconAnalysis, ExternalLink as IconExternalLink, Icon } from 'react-feather';
+import { Ajax, AjaxCredentials, User } from 'seatsurfing-commons';
 import { WithTranslation, withTranslation } from 'next-i18next';
 import { Nav } from 'react-bootstrap';
 import { NextRouter } from 'next/router';
 import withReadyRouter from './withReadyRouter';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import RuntimeConfig from './RuntimeConfig';
 
 interface State {
-    superAdmin: boolean
-    spaceAdmin: boolean
-    orgAdmin: boolean
 }
 
 interface Props extends WithTranslation {
@@ -18,33 +17,29 @@ interface Props extends WithTranslation {
 }
 
 class SideBar extends React.Component<Props, State> {
+    dynamicIcons: Map<string, any> = new Map();
+
     constructor(props: any) {
         super(props);
         this.state = {
-            superAdmin: false,
-            spaceAdmin: false,
-            orgAdmin: false,
         };
     }
 
     componentDidMount = () => {
-        User.getSelf().then(user => {
-            if (user.role === 0) {
-                Ajax.CREDENTIALS = new AjaxCredentials();
-                Ajax.PERSISTER.deleteCredentialsFromSessionStorage().then(() => {
-                    this.props.router.push("/login");
-                });
-                return;
-            }
-            this.setState({
-                superAdmin: user.superAdmin,
-                spaceAdmin: user.spaceAdmin,
-                orgAdmin: user.admin,
+        if (!RuntimeConfig.INFOS.spaceAdmin) {
+            Ajax.CREDENTIALS = new AjaxCredentials();
+            Ajax.PERSISTER.deleteCredentialsFromSessionStorage().then(() => {
+                this.props.router.push("/login");
             });
-        });
+            return;
+        }
     }
 
     getActiveKey = () => {
+        let path = this.props.router.pathname;
+        if (path.startsWith('/plugin/')) {
+            return window.location.pathname.replace('/admin', '');
+        }
         const startPaths = [
             '/organizations',
             '/users',
@@ -52,7 +47,6 @@ class SideBar extends React.Component<Props, State> {
             '/locations',
             '/bookings'
         ];
-        let path = this.props.router.pathname;
         let result = path;
         startPaths.forEach(startPath => {
             if (path.startsWith(startPath)) {
@@ -64,7 +58,7 @@ class SideBar extends React.Component<Props, State> {
 
     render() {
         let orgItem = <></>;
-        if (this.state.superAdmin) {
+        if (RuntimeConfig.INFOS.superAdmin) {
             orgItem = (
                 <li className="nav-item">
                     <Nav.Link as={Link} eventKey="/organizations" href="/organizations"><IconBox className="feather" /> {this.props.t("organizations")}</Nav.Link>
@@ -72,7 +66,7 @@ class SideBar extends React.Component<Props, State> {
             );
         }
         let orgAdminItems = <></>;
-        if (this.state.orgAdmin) {
+        if (RuntimeConfig.INFOS.orgAdmin) {
             orgAdminItems = (
                 <>
                     <li className="nav-item">
@@ -81,6 +75,23 @@ class SideBar extends React.Component<Props, State> {
                     <li className="nav-item">
                         <Nav.Link as={Link} eventKey="/settings" href="/settings"><IconSettings className="feather" /> {this.props.t("settings")}</Nav.Link>
                     </li>
+                    {
+                        RuntimeConfig.INFOS.pluginMenuItems.map((item) => {
+                            if (item.visibility !== 'admin') {
+                                return;
+                            }
+                            let PluginIcon = this.dynamicIcons.get(item.icon);
+                            if (!PluginIcon) {
+                                PluginIcon = dynamic(() => import('react-feather/dist/icons/' + item.icon.toLowerCase()), { ssr: true }) as Icon;
+                                this.dynamicIcons.set(item.icon, PluginIcon);
+                            }
+                            return (
+                                <li className="nav-item" key={'plugin-' + item.id}>
+                                    <Nav.Link as={Link} eventKey={'/plugin/' + item.id} href={"/plugin/" + item.id}><PluginIcon className="feather" /> {item.title}</Nav.Link>
+                                </li>
+                            );
+                        })
+                    }
                 </>
             );
         }
@@ -100,10 +111,27 @@ class SideBar extends React.Component<Props, State> {
                         <li className="nav-item">
                             <Nav.Link as={Link} eventKey="/report/analysis" href="/report/analysis"><IconAnalysis className="feather" /> {this.props.t("analysis")}</Nav.Link>
                         </li>
+                        {
+                            RuntimeConfig.INFOS.pluginMenuItems.map((item) => {
+                                if (item.visibility !== 'spaceadmin') {
+                                    return;
+                                }
+                                let PluginIcon = this.dynamicIcons.get(item.icon);
+                                if (!PluginIcon) {
+                                    PluginIcon = dynamic(() => import('react-feather/dist/icons/' + item.icon.toLowerCase()), { ssr: true }) as Icon;
+                                    this.dynamicIcons.set(item.icon, PluginIcon);
+                                }
+                                return (
+                                    <li className="nav-item" key={'plugin-' + item.id}>
+                                        <Nav.Link as={Link} eventKey={'/plugin/' + item.id} href={"/plugin/" + item.id}><PluginIcon className="feather" /> {item.title}</Nav.Link>
+                                    </li>
+                                );
+                            })
+                        }
                         {orgAdminItems}
                         {orgItem}
                         <li className="nav-item">
-                            <Nav.Link onClick={(e) => {e.preventDefault(); window.location.href="/ui/";}}><IconExternalLink className="feather" /> {this.props.t("bookingui")}</Nav.Link>
+                            <Nav.Link onClick={(e) => { e.preventDefault(); window.location.href = "/ui/"; }}><IconExternalLink className="feather" /> {this.props.t("bookingui")}</Nav.Link>
                         </li>
                     </ul>
                 </div>

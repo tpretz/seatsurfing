@@ -1,5 +1,5 @@
 import React from 'react';
-import { Ajax, Stats, User } from 'flexspace-commons';
+import { Ajax, Stats, User } from 'seatsurfing-commons';
 import { Card, Row, Col, ProgressBar, Alert } from 'react-bootstrap';
 import { WithTranslation, withTranslation } from 'next-i18next';
 import { NextRouter } from 'next/router';
@@ -47,7 +47,8 @@ class Dashboard extends React.Component<Props, State> {
     Promise.all(promises).then(() => {
       this.setState({ loading: false });
     }).catch(e => {
-      // something went wrong
+      this.props.router.push("/login");
+      return;
     });
   }
 
@@ -55,7 +56,6 @@ class Dashboard extends React.Component<Props, State> {
     let self = this;
     return new Promise<void>(function (resolve, reject) {
       Ajax.get("/uc/").then(res => {
-        console.log(JSON.stringify(res))
         self.setState({
           latestVersion: res.json
         }, () => resolve());
@@ -142,8 +142,9 @@ class Dashboard extends React.Component<Props, State> {
     }
 
     let updateHint = <></>;
-    if (this.state.latestVersion && this.state.latestVersion.updateAvailable) {
-      updateHint = <Alert variant="warning"><a href="https://github.com/seatsurfing/backend/releases" target="_blank" rel="noreferrer">{this.props.t("updateAvailable", {version: this.state.latestVersion.version})}</a></Alert>;
+    const domain = window.location.host.split(':').shift();
+    if (this.state.latestVersion && this.state.latestVersion.updateAvailable && !(domain?.endsWith('.seatsurfing.app') || domain?.endsWith('.seatsurfing.io'))) {
+      updateHint = <Alert variant="warning"><a href="https://github.com/seatsurfing/seatsurfing/releases" target="_blank" rel="noreferrer">{this.props.t("updateAvailable", {version: this.state.latestVersion.version})}</a></Alert>;
     }
 
     return (

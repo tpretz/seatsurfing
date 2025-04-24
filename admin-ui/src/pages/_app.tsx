@@ -7,13 +7,16 @@ import '@/styles/Login.css'
 import '@/styles/NavBar.css'
 import '@/styles/Settings.css'
 import '@/styles/SideBar.css'
+import 'react-calendar/dist/Calendar.css';
+import '@/styles/Booking.css'
 import type { AppProps } from 'next/app'
 import nextI18nConfig from '../../next-i18next.config'
 import { WithTranslation, appWithTranslation, withTranslation } from 'next-i18next'
-import { Ajax, Formatting } from 'flexspace-commons'
+import { Ajax, Formatting } from 'seatsurfing-commons'
 import React from 'react'
 import Loading from '@/components/Loading'
 import Head from 'next/head'
+import RuntimeConfig from '@/components/RuntimeConfig'
 
 
 interface State {
@@ -35,17 +38,10 @@ class App extends React.Component<Props, State> {
       }
     }
     setTimeout(() => {
-      this.initAjax();
-    }, 10);
-  }
-
-  initAjax = async () => {
-    Ajax.PERSISTER.readCredentialsFromSessionStorage().then(c => {
-      Ajax.CREDENTIALS = c;
-      this.setState({
-        isLoading: false
+      RuntimeConfig.verifyToken(() => {
+        this.setState({isLoading: false});
       });
-    });
+    }, 10);
   }
 
   render() {

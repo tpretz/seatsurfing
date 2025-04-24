@@ -1,6 +1,6 @@
 import React from 'react';
 import { Nav, Button, Form } from 'react-bootstrap';
-import { Ajax, AjaxCredentials } from 'flexspace-commons';
+import { Ajax, AjaxCredentials } from 'seatsurfing-commons';
 import { WithTranslation, withTranslation } from 'next-i18next';
 import { NextRouter } from 'next/router';
 import Link from 'next/link';
@@ -26,8 +26,13 @@ class NavBar extends React.Component<Props, State> {
 
     logout = (e: any) => {
         e.preventDefault();
+        let logoutUrl = Ajax.CREDENTIALS.logoutUrl;
         Ajax.CREDENTIALS = new AjaxCredentials();
         Ajax.PERSISTER.deleteCredentialsFromSessionStorage().then(() => {
+            if (logoutUrl) {
+                window.location.href = logoutUrl;
+                return;
+            }
             this.setState({
                 redirect: "/login"
             });

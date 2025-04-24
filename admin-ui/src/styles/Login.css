@@ -10,6 +10,12 @@
     padding-bottom: 50px;
 }
 
+.lng-selector {
+    position: absolute;
+    right: 10px;
+    bottom: -5px;
+}
+
 .form-signin {
     width: 100%;
     max-width: 330px;
@@ -48,7 +54,7 @@
 
 .copyright-footer {
     position: absolute;
-    bottom: 0;
+    bottom: 10px;
     text-align: center;
     font-size: 12px;
     width: 100%;

@@ -1,7 +1,7 @@
 import React from 'react';
-import { User, Organization, AuthProvider, Settings as OrgSettings, Domain, Ajax, AjaxCredentials } from 'flexspace-commons';
-import { Form, Col, Row, Table, Button, Alert, InputGroup, Popover, OverlayTrigger } from 'react-bootstrap';
-import { Plus as IconPlus, Save as IconSave } from 'react-feather';
+import { User, Organization, AuthProvider, Settings as OrgSettings, Domain, Ajax, AjaxCredentials } from 'seatsurfing-commons';
+import { Form, Col, Row, Table, Button, Alert, InputGroup, Popover, OverlayTrigger, Badge } from 'react-bootstrap';
+import { Plus as IconPlus, Save as IconSave, AlertTriangle as IconAlert, Check as IconCheck } from 'react-feather';
 import { NextRouter } from 'next/router';
 import { WithTranslation, withTranslation } from 'next-i18next';
 import FullLayout from '@/components/FullLayout';
@@ -13,24 +13,32 @@ interface State {
   allowAnyUser: boolean
   defaultTimezone: string
   confluenceServerSharedSecret: string
+  customLogoUrl: string
   maxBookingsPerUser: number
   maxConcurrentBookingsPerUser: number
   maxDaysInAdvance: number
+  enableMaxHoursBeforeDelete: boolean
+  maxHoursBeforeDelete: number
+  maxHoursPartiallyBooked: number
+  maxHoursPartiallyBookedEnabled: boolean
   maxBookingDurationHours: number
+  minBookingDurationHours: number
   dailyBasisBooking: boolean
+  noAdminRestrictions: boolean
   showNames: boolean
   allowBookingNonExistUsers: boolean
-  subscriptionActive: boolean
-  subscriptionMaxUsers: number
   allowOrgDelete: boolean
   selectedAuthProvider: string
+  disableBuddies: boolean
   loading: boolean
   submitting: boolean
   saved: boolean
   error: boolean
   newDomain: string
   domains: Domain[]
-  userDomain: string
+  latestVersion: any
+  featureNoUserLimit: boolean
+  featureCustomDomains: boolean
 }
 
 interface Props extends WithTranslation {
@@ -51,24 +59,32 @@ class Settings extends React.Component<Props, State> {
       allowAnyUser: true,
       defaultTimezone: "",
       confluenceServerSharedSecret: "",
+      customLogoUrl: "",
       maxBookingsPerUser: 0,
       maxConcurrentBookingsPerUser: 0,
       maxBookingDurationHours: 0,
+      minBookingDurationHours: 0,
       maxDaysInAdvance: 0,
+      enableMaxHoursBeforeDelete: false,
+      maxHoursBeforeDelete: 0,
+      maxHoursPartiallyBooked: 0,
+      maxHoursPartiallyBookedEnabled: false,
       dailyBasisBooking: false,
+      noAdminRestrictions: false,
       showNames: false,
       allowBookingNonExistUsers: false,
-      subscriptionActive: false,
-      subscriptionMaxUsers: 0,
       allowOrgDelete: false,
       selectedAuthProvider: "",
+      disableBuddies: false,
       loading: true,
       submitting: false,
       saved: false,
       error: false,
       newDomain: "",
       domains: [],
-      userDomain: ""
+      latestVersion: null,
+      featureNoUserLimit: false,
+      featureCustomDomains: false
     };
   }
 
@@ -82,6 +98,7 @@ class Settings extends React.Component<Props, State> {
       this.loadItems(),
       this.loadAuthProviders(),
       this.loadTimezones(),
+      this.checkUpdates(),
     ];
     Promise.all(promises).then(() => {
       this.setState({ loading: false });
@@ -90,15 +107,30 @@ class Settings extends React.Component<Props, State> {
 
   loadItems = async (): Promise<void> => {
     return User.getSelf().then(user => {
-      let userDomain = user.email.substring(user.email.indexOf("@")+1).toLowerCase();
       return Organization.get(user.organizationId).then(org => {
         this.org = org;
         return Domain.list(org.id).then(domains => {
           this.setState({
             domains: domains,
-            userDomain: userDomain
           });
         });
+      });
+    });
+  }
+
+  checkUpdates = async (): Promise<void> => {
+    let self = this;
+    return new Promise<void>(function (resolve, reject) {
+      Ajax.get("/uc/").then(res => {
+        self.setState({
+          latestVersion: res.json
+        }, () => resolve() );
+      }).catch(() => {
+        console.warn("Could not check for updates.")
+        let res = { version: "", updateAvailable: false };
+        self.setState({
+          latestVersion: res
+        }, () => resolve());
       });
     });
   }
@@ -116,19 +148,27 @@ class Settings extends React.Component<Props, State> {
         if (s.name === "allow_any_user") state.allowAnyUser = (s.value === "1");
         if (s.name === "default_timezone") state.defaultTimezone = s.value;
         if (s.name === "confluence_server_shared_secret") state.confluenceServerSharedSecret = s.value;
+        if (s.name === "custom_logo_url") state.customLogoUrl = s.value;
         if (s.name === "max_bookings_per_user") state.maxBookingsPerUser = window.parseInt(s.value);
         if (s.name === "max_concurrent_bookings_per_user") state.maxConcurrentBookingsPerUser = window.parseInt(s.value);
         if (s.name === "max_days_in_advance") state.maxDaysInAdvance = window.parseInt(s.value);
+        if (s.name === "enable_max_hours_before_delete") state.enableMaxHoursBeforeDelete = window.parseInt(s.value);
+        if (s.name === "max_hours_before_delete") state.maxHoursBeforeDelete = window.parseInt(s.value);
         if (s.name === "max_booking_duration_hours") state.maxBookingDurationHours = window.parseInt(s.value);
+        if (s.name === "min_booking_duration_hours") state.minBookingDurationHours = window.parseInt(s.value);
         if (s.name === "daily_basis_booking") state.dailyBasisBooking = (s.value === "1");
+        if (s.name === "no_admin_restrictions") state.noAdminRestrictions = (s.value === "1");
         if (s.name === "show_names") state.showNames = (s.value === "1");
         if (s.name === "allow_booking_nonexist_users") state.allowBookingNonExistUsers = (s.value === "1");
-        if (s.name === "subscription_active") state.subscriptionActive = (s.value === "1");
-        if (s.name === "subscription_max_users") state.subscriptionMaxUsers = window.parseInt(s.value);
+        if (s.name === "disable_buddies") state.disableBuddies = (s.value === "1");
+        if (s.name === "max_hours_partially_booked_enabled") state.maxHoursPartiallyBookedEnabled = (s.value === "1");
+        if (s.name === "max_hours_partially_booked") state.maxHoursPartiallyBooked = window.parseInt(s.value);
+        if (s.name === "feature_no_user_limit") state.featureNoUserLimit = (s.value === "1");
+        if (s.name === "feature_custom_domains") state.featureCustomDomains = (s.value === "1");
         if (s.name === "_sys_org_signup_delete") state.allowOrgDelete = (s.value === "1");
       });
-      if (state.dailyBasisBooking && (state.maxBookingDurationHours%24 !== 0)) {
-        state.maxBookingDurationHours += (24-state.maxBookingDurationHours%24);
+      if (state.dailyBasisBooking && (state.maxBookingDurationHours % 24 !== 0)) {
+        state.maxBookingDurationHours += (24 - state.maxBookingDurationHours % 24);
       }
       this.setState({
         ...this.state,
@@ -154,13 +194,21 @@ class Settings extends React.Component<Props, State> {
       new OrgSettings("allow_any_user", this.state.allowAnyUser ? "1" : "0"),
       new OrgSettings("default_timezone", this.state.defaultTimezone),
       new OrgSettings("confluence_server_shared_secret", this.state.confluenceServerSharedSecret),
+      new OrgSettings("custom_logo_url", this.state.customLogoUrl),
       new OrgSettings("daily_basis_booking", this.state.dailyBasisBooking ? "1" : "0"),
+      new OrgSettings("no_admin_restrictions", this.state.noAdminRestrictions ? "1" : "0"),
       new OrgSettings("show_names", this.state.showNames ? "1" : "0"),
       new OrgSettings("allow_booking_nonexist_users", this.state.allowBookingNonExistUsers ? "1" : "0"),
+      new OrgSettings("disable_buddies", this.state.disableBuddies ? "1" : "0"),
       new OrgSettings("max_bookings_per_user", this.state.maxBookingsPerUser.toString()),
       new OrgSettings("max_concurrent_bookings_per_user", this.state.maxConcurrentBookingsPerUser.toString()),
       new OrgSettings("max_days_in_advance", this.state.maxDaysInAdvance.toString()),
-      new OrgSettings("max_booking_duration_hours", this.state.maxBookingDurationHours.toString())
+      new OrgSettings("enable_max_hours_before_delete", this.state.enableMaxHoursBeforeDelete ? "1" : "0"),
+      new OrgSettings("max_hours_before_delete", this.state.maxHoursBeforeDelete.toString()),
+      new OrgSettings("max_booking_duration_hours", this.state.maxBookingDurationHours.toString()),
+      new OrgSettings("max_hours_partially_booked_enabled", this.state.maxHoursPartiallyBookedEnabled ? "1" : "0"),
+      new OrgSettings("max_hours_partially_booked", this.state.maxHoursPartiallyBooked.toString()),
+      new OrgSettings("min_booking_duration_hours", this.state.minBookingDurationHours.toString())
     ];
     OrgSettings.setAll(payload).then(() => {
       this.setState({
@@ -202,7 +250,7 @@ class Settings extends React.Component<Props, State> {
         domain.verify().then(() => {
           Domain.list(domain.organizationId).then(domains => this.setState({ domains: domains }));
         }).catch(e => {
-          alert(this.props.t("errorValidateDomain", {domain: domainName}));
+          alert(this.props.t("errorValidateDomain", { domain: domainName }));
         })
       }
     });
@@ -210,6 +258,9 @@ class Settings extends React.Component<Props, State> {
 
   isValidDomain = () => {
     if (this.state.newDomain.indexOf(".") < 3) {
+      return false;
+    }
+    if (this.state.newDomain.toLowerCase().endsWith(".seatsurfing.app") || this.state.newDomain.toLowerCase().endsWith(".seatsurfing.io")) {
       return false;
     }
     let lastIndex = this.state.newDomain.length - 3;
@@ -234,8 +285,18 @@ class Settings extends React.Component<Props, State> {
     });
   }
 
+  setPrimaryDomain = (domainName: string) => {
+    this.state.domains.forEach(domain => {
+      if (domain.domain === domainName) {
+        domain.setPrimary().then(() => {
+          Domain.list(this.org ? this.org.id : "").then(domains => this.setState({ domains: domains }));
+        });
+      }
+    });
+  }
+
   removeDomain = (domainName: string) => {
-    if (!window.confirm(this.props.t("confirmDeleteDomain", {domain: domainName}))) {
+    if (!window.confirm(this.props.t("confirmDeleteDomain", { domain: domainName }))) {
       return;
     }
     this.state.domains.forEach(domain => {
@@ -267,24 +328,10 @@ class Settings extends React.Component<Props, State> {
     }
   }
 
-  manageSubscription = () => {
-    let windowRef = window.open();
-    this.org?.getSubscriptionManagementURL().then(url => {
-      if (windowRef) {
-        windowRef.location.href = url;
-      }
-    }).catch(() => {
-      if (windowRef) {
-        windowRef?.close();
-      }
-      alert(this.props.t("errorTryAgain"));
-    });
-  }
-
   onDailyBasisBookingChange = (enabled: boolean) => {
     let maxBookingDurationHours: number = Number(this.state.maxBookingDurationHours);
-    if (enabled && (maxBookingDurationHours%24 !== 0)) {
-      maxBookingDurationHours += (24-maxBookingDurationHours%24);
+    if (enabled && (maxBookingDurationHours % 24 !== 0)) {
+      maxBookingDurationHours += (24 - maxBookingDurationHours % 24);
     }
     this.setState({
       maxBookingDurationHours: maxBookingDurationHours,
@@ -313,7 +360,7 @@ class Settings extends React.Component<Props, State> {
         <Popover id={popoverId}>
           <Popover.Header as="h3">{this.props.t("verifyDomain")}</Popover.Header>
           <Popover.Body>
-            <div>{this.props.t("verifyDomainHowto", {domain: domain.domain})}</div>
+            <div>{this.props.t("verifyDomainHowto", { domain: domain.domain })}</div>
             <div>&nbsp;</div>
             <div><strong>seatsurfing-verification={domain.verifyToken}</strong></div>
             <div>&nbsp;</div>
@@ -328,14 +375,23 @@ class Settings extends React.Component<Props, State> {
           </OverlayTrigger>
         );
       }
+      let accessibleCheckmark = <IconAlert className="feather" color='orange' />;
+      if (domain.accessible) {
+        accessibleCheckmark = <IconCheck className="feather" color='green' />;
+      }
       let key = "domain-" + domain.domain;
-      let canDelete = domain.domain.toLowerCase() !== this.state.userDomain;
       return (
         <Form.Group key={key} className="domain-row">
           {domain.domain}
-            &nbsp;
-          <Button variant="danger" size="sm" onClick={() => this.removeDomain(domain.domain)} disabled={!canDelete}>{this.props.t("remove")}</Button>
-            &nbsp;
+          &nbsp;
+          {accessibleCheckmark}
+          &nbsp;
+          <Badge hidden={!domain.primary}>Primary</Badge>
+          &nbsp;
+          <Button variant="secondary" size="sm" hidden={domain.primary} onClick={() => this.setPrimaryDomain(domain.domain)}>Primary</Button>
+          &nbsp;
+          <Button variant="danger" size="sm" hidden={domain.domain.endsWith('.seatsurfing.app')} onClick={() => this.removeDomain(domain.domain)}>{this.props.t("remove")}</Button>
+          &nbsp;
           {verify}
         </Form.Group>
       );
@@ -381,6 +437,21 @@ class Settings extends React.Component<Props, State> {
     }
 
     let buttonSave = <Button className="btn-sm" variant="outline-secondary" type="submit" form="form"><IconSave className="feather" /> {this.props.t("save")}</Button>;
+    let updateHint = <span className='form-control-plaintext'>{process.env.NEXT_PUBLIC_PRODUCT_VERSION}</span>
+    const domain = window.location.host.split(':').shift();
+    if (this.state.latestVersion && !(domain?.endsWith('.seatsurfing.app') || domain?.endsWith('.seatsurfing.io')))  {
+      if (this.state.latestVersion.updateAvailable) {
+        updateHint = (
+          <span className='form-control-plaintext'>
+            {process.env.NEXT_PUBLIC_PRODUCT_VERSION}
+            &nbsp;
+            (<a href="https://github.com/seatsurfing/seatsurfing/releases" target="_blank">upgrade to {this.state.latestVersion.version}</a>)
+          </span>
+        );
+      } else {
+        updateHint = <span className='form-control-plaintext'>{process.env.NEXT_PUBLIC_PRODUCT_VERSION} (up to date)</span>
+      }
+    }
 
     return (
       <FullLayout headline={this.props.t("settings")} buttons={buttonSave}>
@@ -399,8 +470,21 @@ class Settings extends React.Component<Props, State> {
             </Col>
           </Form.Group>
           <Form.Group as={Row}>
+            <Form.Label column sm="2">Version</Form.Label>
+            <Col sm="4">
+              {updateHint}
+            </Col>
+          </Form.Group>
+          <Form.Group as={Row}>
             <Col sm="6">
               <Form.Check type="checkbox" id="check-allowAnyUser" label={this.props.t("allowAnyUser")} checked={this.state.allowAnyUser} onChange={(e: any) => this.setState({ allowAnyUser: e.target.checked })} />
+            </Col>
+          </Form.Group>
+          <Form.Group as={Row}>
+            <Form.Label column sm="2">{this.props.t("customLogoUrl")}</Form.Label>
+            <Col sm="4">
+              <Form.Control type="url" value={this.state.customLogoUrl} onChange={(e: any) => this.setState({ customLogoUrl: e.target.value })} />
+              <Form.Text className="text-muted">{this.props.t("customLogoUrlHint")}</Form.Text>
             </Col>
           </Form.Group>
           <Form.Group as={Row}>
@@ -425,6 +509,35 @@ class Settings extends React.Component<Props, State> {
             </Col>
           </Form.Group>
           <Form.Group as={Row}>
+            <Form.Label column sm="2">{this.props.t("maxHoursBeforeDelete")}</Form.Label>
+            <Col sm="4">
+              <InputGroup>
+                <InputGroup.Checkbox id="check-maxHoursBeforeDelete" checked={this.state.enableMaxHoursBeforeDelete} onChange={(e: any) => this.setState({ enableMaxHoursBeforeDelete: e.target.checked })} />
+                <Form.Control type="number" value={this.state.maxHoursBeforeDelete} onChange={(e: any) => this.setState({ maxHoursBeforeDelete: e.target.value })} min="0" max="9999" disabled={!this.state.enableMaxHoursBeforeDelete} />
+              </InputGroup>
+            </Col>
+          </Form.Group>
+          <Form.Group as={Row}>
+            <Form.Label column sm="2">{this.props.t("maxHoursPartiallyBooked")}</Form.Label>
+            <Col sm="4">
+              <InputGroup>
+                <InputGroup.Checkbox checked={this.state.maxHoursPartiallyBookedEnabled} onChange={(e: any) => this.setState({ maxHoursPartiallyBookedEnabled: e.target.checked })} />
+                <Form.Control type="number" value={this.state.maxHoursPartiallyBooked} onChange={(e: any) => this.setState({ maxHoursPartiallyBooked: e.target.value })} min="0" max="9999" disabled={!this.state.maxHoursPartiallyBookedEnabled} />
+                <InputGroup.Text>{this.props.t("hours")}</InputGroup.Text>
+              </InputGroup>
+            </Col>
+          </Form.Group>
+          <Form.Group as={Row}>
+            <Col sm="6">
+              <Form.Check type="checkbox" id="check-noAdminRestrictions" label={this.props.t("noAdminRestrictions")} checked={this.state.noAdminRestrictions} onChange={(e: any) => this.setState({ noAdminRestrictions: e.target.checked })} />
+            </Col>
+          </Form.Group>
+          <Form.Group as={Row}>
+            <Col sm="6">
+              <Form.Check type="checkbox" id="check-disableBuddies" label={this.props.t("disableBuddies")} checked={this.state.disableBuddies} onChange={(e: any) => this.setState({ disableBuddies: e.target.checked })} />
+            </Col>
+          </Form.Group>
+          <Form.Group as={Row}>
             <Col sm="6">
               <Form.Check type="checkbox" id="check-dailyBasisBooking" label={this.props.t("dailyBasisBooking")} checked={this.state.dailyBasisBooking} onChange={(e: any) => this.onDailyBasisBookingChange(e.target.checked)} />
             </Col>
@@ -434,6 +547,15 @@ class Settings extends React.Component<Props, State> {
             <Col sm="4">
               <InputGroup>
                 <Form.Control type="number" value={this.state.maxBookingDurationHours} onChange={(e: any) => this.setState({ maxBookingDurationHours: e.target.value })} min="0" max="9999" />
+                <InputGroup.Text>{this.props.t("hours")}</InputGroup.Text>
+              </InputGroup>
+            </Col>
+          </Form.Group>
+          <Form.Group as={Row}>
+            <Form.Label column sm="2">{this.props.t("minBookingDurationHours")}</Form.Label>
+            <Col sm="4">
+              <InputGroup>
+                <Form.Control type="number" value={this.state.minBookingDurationHours} onChange={(e: any) => this.setState({ minBookingDurationHours: e.target.value })} min="0" max="9999" />
                 <InputGroup.Text>{this.props.t("hours")}</InputGroup.Text>
               </InputGroup>
             </Col>
@@ -466,7 +588,7 @@ class Settings extends React.Component<Props, State> {
             <Form.Label column sm="2">{this.props.t("domains")}</Form.Label>
             <Col sm="4">
               {domains}
-              <InputGroup size="sm">
+              <InputGroup size="sm" hidden={!this.state.featureCustomDomains}>
                 <Form.Control type="text" value={this.state.newDomain} onChange={(e: any) => this.setState({ newDomain: e.target.value })} placeholder={this.props.t("yourDomainPlaceholder")} onKeyDown={this.handleNewDomainKeyDown} />
                 <Button variant="outline-secondary" onClick={this.addDomain} disabled={!this.isValidDomain()}>{this.props.t("addDomain")}</Button>
               </InputGroup>

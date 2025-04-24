@@ -6,7 +6,6 @@ export default class Organization extends Entity {
     contactFirstname: string;
     contactLastname: string;
     contactEmail: string;
-    country: string;
     language: string;
 
     constructor() {
@@ -15,7 +14,6 @@ export default class Organization extends Entity {
         this.contactFirstname = "";
         this.contactLastname = "";
         this.contactEmail = "";
-        this.country = "";
         this.language = "";
     }
 
@@ -25,7 +23,6 @@ export default class Organization extends Entity {
             "firstname": this.contactFirstname,
             "lastname": this.contactLastname,
             "email": this.contactEmail,
-            "country": this.country,
             "language": this.language
         });
     }
@@ -36,7 +33,6 @@ export default class Organization extends Entity {
         this.contactFirstname = input.firstname;
         this.contactLastname = input.lastname;
         this.contactEmail = input.email;
-        this.country = input.country;
         this.language = input.language;
     }
 
@@ -50,12 +46,6 @@ export default class Organization extends Entity {
 
     async delete(): Promise<void> {
         return Ajax.delete(this.getBackendUrl() + this.id).then(() => undefined);
-    }
-
-    async getSubscriptionManagementURL(): Promise<string> {
-        return Ajax.get(this.getBackendUrl() + this.id + "/subscription/manage").then(res => {
-            return res.json.url;
-        });
     }
 
     static async get(id: string): Promise<Organization> {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Form } from 'react-bootstrap';
-import { Ajax } from 'flexspace-commons';
+import { Ajax } from 'seatsurfing-commons';
 import RuntimeConfig from '@/components/RuntimeConfig';
 import Loading from '@/components/Loading';
 import { NextRouter } from 'next/router';
@@ -34,15 +34,17 @@ class LoginSuccess extends React.Component<Props, State> {
           Ajax.CREDENTIALS = {
             accessToken: res.json.accessToken,
             refreshToken: res.json.refreshToken,
-            accessTokenExpiry: new Date(new Date().getTime() + Ajax.ACCESS_TOKEN_EXPIRY_OFFSET)
+            accessTokenExpiry: new Date(new Date().getTime() + Ajax.ACCESS_TOKEN_EXPIRY_OFFSET),
+            logoutUrl: res.json.logoutUrl,
           };
           if (res.json.longLived) {
             Ajax.PERSISTER.persistRefreshTokenInLocalStorage(Ajax.CREDENTIALS);
           }
           Ajax.PERSISTER.updateCredentialsSessionStorage(Ajax.CREDENTIALS).then(() => {
             RuntimeConfig.setLoginDetails().then(() => {
+              let redirect = this.props.router.query["redir"] as string || "/search";
               this.setState({
-                redirect: "/search"
+                redirect
               });
             });
           });
