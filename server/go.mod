@@ -9,7 +9,9 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
+	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
+	github.com/slack-go/slack v0.16.0
 	golang.org/x/crypto v0.37.0
 	golang.org/x/oauth2 v0.29.0
 )
@@ -17,6 +19,7 @@ require (
 require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/teambition/rrule-go v1.8.2 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
