@@ -1,4 +1,5 @@
 .DS_Store
+.env
 .eslintcache
 docker-readme-modified.md
 .vscode/

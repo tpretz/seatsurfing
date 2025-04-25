@@ -11,6 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -45,6 +48,13 @@ type Config struct {
 	CryptKey                            string
 	FilesystemBasePath                  string
 	PluginsSubPath                      string
+	SlackAuthToken                      string
+	SlackAppToken                       string
+	SlackChannelId                      string
+	SlackRetryBackoff                   time.Duration
+	SlackRetryCount                     int
+	SlackDebug                          bool
+	OrgName                             string
 }
 
 var _configInstance *Config
@@ -53,6 +63,7 @@ var _configOnce sync.Once
 func GetConfig() *Config {
 	_configOnce.Do(func() {
 		_configInstance = &Config{}
+		godotenv.Load(".env")
 		_configInstance.ReadConfig()
 	})
 	return _configInstance
@@ -65,7 +76,7 @@ func (c *Config) ReadConfig() {
 	c.DisableUiProxy = (c.getEnv("DISABLE_UI_PROXY", "0") == "1")
 	c.AdminUiBackend = c.getEnv("ADMIN_UI_BACKEND", "localhost:3000")
 	c.BookingUiBackend = c.getEnv("BOOKING_UI_BACKEND", "localhost:3001")
-	c.PostgresURL = c.getEnv("POSTGRES_URL", "postgres://postgres:root@localhost/seatsurfing?sslmode=disable")
+	c.PostgresURL = c.getEnv("POSTGRES_URL", "postgres://seatsurfing:DB_PASSWORD@localhost/seatsurfing?sslmode=disable")
 	privateKey, _ := c.loadPrivateKey(c.getEnv("JWT_PRIVATE_KEY", ""))
 	publicKey, _ := c.loadPublicKey(c.getEnv("JWT_PUBLIC_KEY", ""))
 	if publicKey == nil || privateKey == nil {
@@ -111,6 +122,13 @@ func (c *Config) ReadConfig() {
 	pwd, _ := os.Getwd()
 	c.FilesystemBasePath = c.getEnv("FILESYSTEM_BASE_PATH", pwd)
 	c.PluginsSubPath = c.getEnv("PLUGINS_SUB_PATH", "plugins")
+	c.SlackAuthToken = c.getEnv("SLACK_AUTH_TOKEN", "")
+	c.SlackAppToken = c.getEnv("SLACK_APP_TOKEN", "")
+	c.SlackChannelId = c.getEnv("SLACK_CHANNEL_ID", "")
+	c.SlackRetryCount = c.getEnvInt("SLACK_RETRY_COUNT", 3)
+	c.SlackRetryBackoff = 5 * time.Second
+	c.SlackDebug = (c.getEnv("SLACK_DEBUG", "0") == "1")
+	c.OrgName = c.getEnv("ORG_NAME", "Sample Company")
 }
 
 func (c *Config) loadPrivateKey(path string) (*rsa.PrivateKey, error) {
