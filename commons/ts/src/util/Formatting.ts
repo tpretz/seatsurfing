@@ -1,7 +1,7 @@
 import { TFunction } from "i18next";
 
 export default class Formatting {
-    static Language: string = "en-GB";
+    static Language: string = "en";
     static t: TFunction;
     
     static tbool(s: string) {
@@ -81,22 +81,6 @@ export default class Formatting {
         }
         return Formatting.getFormatterDate().format(enter);
     }
-
-    static formatDateDDMMYYYY(date: Date): string {
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
-      }
-      
-      static formatDateTimeDDMMYYYY(date: Date): string {
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        return `${day}/${month}/${year}, ${hours}:${minutes}`;
-      }    
 
     static convertToFakeUTCDate(d: Date): Date {
         return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), 0));

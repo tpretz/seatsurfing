@@ -61,21 +61,17 @@ class Bookings extends React.Component<Props, State> {
   }
 
   renderItem = (item: Booking) => {
-    // Ensure dates are proper Date objects
-    const enterDate = new Date(item.enter);
-    const leaveDate = new Date(item.leave);
-    
+    let formatter = Formatting.getFormatter();
+    if (RuntimeConfig.INFOS.dailyBasisBooking) {
+      formatter = Formatting.getFormatterNoTime();
+    }
     return (
       <ListGroup.Item key={item.id} action={true} onClick={(e) => { e.preventDefault(); this.onItemPress(item); }}>
         <h5>{Formatting.getDateOffsetText(item.enter, item.leave)}</h5>
         <p>
           <IconLocation className="feather" />&nbsp;{item.space.location.name}, {item.space.name}<br />
-          <IconEnter className="feather" />&nbsp;{RuntimeConfig.INFOS.dailyBasisBooking 
-            ? Formatting.formatDateDDMMYYYY(enterDate) 
-            : Formatting.formatDateTimeDDMMYYYY(enterDate)}<br />
-          <IconLeave className="feather" />&nbsp;{RuntimeConfig.INFOS.dailyBasisBooking 
-            ? Formatting.formatDateDDMMYYYY(leaveDate) 
-            : Formatting.formatDateTimeDDMMYYYY(leaveDate)}
+          <IconEnter className="feather" />&nbsp;{formatter.format(item.enter)}<br />
+          <IconLeave className="feather" />&nbsp;{formatter.format(item.leave)}
         </p>
       </ListGroup.Item>
     );
@@ -97,7 +93,10 @@ class Bookings extends React.Component<Props, State> {
         </>
       );
     }
-    
+    let formatter = Formatting.getFormatter();
+    if (RuntimeConfig.INFOS.dailyBasisBooking) {
+      formatter = Formatting.getFormatterNoTime();
+    }
     return (
       <>
         <NavBar />
@@ -113,14 +112,7 @@ class Bookings extends React.Component<Props, State> {
             <Modal.Title>{this.props.t("cancelBooking")}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <p>{this.props.t("confirmCancelBooking", { 
-              enter: this.state.selectedItem 
-                ? (RuntimeConfig.INFOS.dailyBasisBooking 
-                  ? Formatting.formatDateDDMMYYYY(new Date(this.state.selectedItem.enter)) 
-                  : Formatting.formatDateTimeDDMMYYYY(new Date(this.state.selectedItem.enter))) 
-                : '', 
-              interpolation: { escapeValue: false } 
-            })}</p>
+            <p>{this.props.t("confirmCancelBooking", { enter: formatter.format(this.state.selectedItem?.enter), interpolation: { escapeValue: false } })}</p>
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={() => this.setState({ selectedItem: null })}>
