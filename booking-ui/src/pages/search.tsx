@@ -800,8 +800,8 @@ class Search extends React.Component<Props, State> {
         <Modal.Body>
           <p>{this.props.t("space")}: {this.state.selectedSpace?.name}</p>
           <p>{this.props.t("area")}: {this.getLocationName()}</p>
-          <p>{this.props.t("enter")}: {formatter.format(Formatting.convertToFakeUTCDate(new Date(this.state.enter)))}</p>
-          <p>{this.props.t("leave")}: {formatter.format(Formatting.convertToFakeUTCDate(new Date(this.state.leave)))}</p>
+          <p>{this.props.t("enter")}: {RuntimeConfig.INFOS.dailyBasisBooking?Formatting.formatDateWithDayDDMMYYYY(new Date(this.state.enter)):Formatting.formatDateTimeWithDayDDMMYYYY(new Date(this.state.enter))}</p>
+          <p>{this.props.t("leave")}: {RuntimeConfig.INFOS.dailyBasisBooking?Formatting.formatDateWithDayDDMMYYYY(new Date(this.state.leave)):Formatting.formatDateTimeWithDayDDMMYYYY(new Date(this.state.leave))}</p>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => this.setState({ showConfirm: false })}>

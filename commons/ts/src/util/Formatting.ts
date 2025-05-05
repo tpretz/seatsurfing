@@ -80,25 +80,28 @@ export default class Formatting {
             return Formatting.t("inXdays", {"x": (start-today)});
         }
         // Use our custom formatter to ensure DD/MM/YYYY format
-        return Formatting.formatDateDDMMYYYY(enter);
+        return Formatting.formatDateWithDayDDMMYYYY(enter);
     }
 
-        // Add these new date formatting methods to Formatting.ts
-    static formatDateDDMMYYYY(date: Date): string {
+    static formatDateWithDayDDMMYYYY(date: Date): string {
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayName = days[date.getDay()];
         const day = date.getDate().toString().padStart(2, '0');
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
+        return `${dayName}, ${day}/${month}/${year}`;
     }
-    
-    static formatDateTimeDDMMYYYY(date: Date): string {
+      
+    static formatDateTimeWithDayDDMMYYYY(date: Date): string {
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayName = days[date.getDay()];
         const day = date.getDate().toString().padStart(2, '0');
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const year = date.getFullYear();
         const hours = date.getHours().toString().padStart(2, '0');
         const minutes = date.getMinutes().toString().padStart(2, '0');
-        return `${day}/${month}/${year}, ${hours}:${minutes}`;
-    }
+        return `${dayName}, ${day}/${month}/${year}, ${hours}:${minutes}`;
+    }    
 
     static convertToFakeUTCDate(d: Date): Date {
             // Create a new date that preserves local time values

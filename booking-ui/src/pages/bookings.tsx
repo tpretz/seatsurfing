@@ -71,11 +71,11 @@ class Bookings extends React.Component<Props, State> {
         <p>
           <IconLocation className="feather" />&nbsp;{item.space.location.name}, {item.space.name}<br />
           <IconEnter className="feather" />&nbsp;{RuntimeConfig.INFOS.dailyBasisBooking 
-            ? Formatting.formatDateDDMMYYYY(enterDate) 
-            : Formatting.formatDateTimeDDMMYYYY(enterDate)}<br />
+            ? Formatting.formatDateWithDayDDMMYYYY(enterDate) 
+            : Formatting.formatDateTimeWithDayDDMMYYYY(enterDate)}<br />
           <IconLeave className="feather" />&nbsp;{RuntimeConfig.INFOS.dailyBasisBooking 
-            ? Formatting.formatDateDDMMYYYY(leaveDate) 
-            : Formatting.formatDateTimeDDMMYYYY(leaveDate)}
+            ? Formatting.formatDateWithDayDDMMYYYY(leaveDate) 
+            : Formatting.formatDateTimeWithDayDDMMYYYY(leaveDate)}
         </p>
       </ListGroup.Item>
     );
@@ -119,8 +119,8 @@ class Bookings extends React.Component<Props, State> {
             <p>{this.props.t("confirmCancelBooking", { 
               enter: this.state.selectedItem 
                 ? (RuntimeConfig.INFOS.dailyBasisBooking 
-                  ? Formatting.formatDateDDMMYYYY(new Date(this.state.selectedItem.enter)) 
-                  : Formatting.formatDateTimeDDMMYYYY(new Date(this.state.selectedItem.enter))) 
+                  ? Formatting.formatDateWithDayDDMMYYYY(new Date(this.state.selectedItem.enter)) 
+                  : Formatting.formatDateTimeWithDayDDMMYYYY(new Date(this.state.selectedItem.enter))) 
                 : '', 
               interpolation: { escapeValue: false } 
             })}</p>
