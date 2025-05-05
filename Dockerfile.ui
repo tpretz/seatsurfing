@@ -1,31 +1,57 @@
+# Stage 1: Build shared commons library
 FROM node:20-alpine AS commons-builder
 COPY commons /app/commons
 WORKDIR /app/commons/ts
 RUN npm install
 RUN npm run build
 
+# Stage 2: Build the Next.js application
 FROM node:20-alpine AS builder
 ARG CI_VERSION
 ENV NEXT_PUBLIC_PRODUCT_VERSION=$CI_VERSION
-#ENV NODE_ENV=production
+
+# Copy shared library from previous stage
 COPY --from=commons-builder /app/commons/ts/ /app/commons/ts
+
+# Copy the booking-ui project
 ADD booking-ui /app/
 WORKDIR /app
+
+# Install dependencies
 RUN npm install
 RUN npm install --save ./commons/ts
+
+# Pre-build fix: Set up the standalone build structure
+# Create directories in advance
+RUN mkdir -p /app/build/standalone/src/pages
+
+# Copy config file to where it will be needed in the build output
+RUN cp next-i18next.config.js /app/build/standalone/next-i18next.config.js
+
+# Build the Next.js application
 RUN npm run build
-# Workaround for these bugs:
-# https://github.com/vercel/next.js/issues/51684
-# https://github.com/tiredofit/docker-collabora-online/pull/28
+
+# Post-build fixes for the config file
+# Copy to all possible locations where it might be needed
+RUN cp next-i18next.config.js /app/build/standalone/
+RUN cp next-i18next.config.js /app/build/standalone/src/
+RUN cp next-i18next.config.js /app/build/standalone/src/pages/
+
+# Patch the Next.js server if needed
 RUN sed -i "s/const hostname = /const hostname = process.env.LISTEN_ADDR || /g" /app/build/standalone/server.js
 
+# Stage 3: Create final runtime image
 FROM gcr.io/distroless/nodejs20-debian12
 ENV NODE_ENV=production
 ENV PORT=3001
 WORKDIR /app
+
+# Copy only what's needed for runtime
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=65532:65532 /app/build/standalone ./
+COPY --from=builder /app/next-i18next.config.js ./
+COPY --from=builder --chown=65532:65532 /app/build/standalone ./ 
 COPY --from=builder --chown=65532:65532 /app/build/static ./build/static
+
 EXPOSE 3001
 USER 65532:65532
 CMD ["server.js"]
