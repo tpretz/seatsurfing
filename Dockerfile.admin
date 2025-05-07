@@ -11,9 +11,15 @@ ENV NEXT_PUBLIC_PRODUCT_VERSION=$CI_VERSION
 COPY --from=commons-builder /app/commons/ts/ /app/commons/ts
 ADD admin-ui /app/
 WORKDIR /app
+
+# Create next-i18next.config.js in the right place before building
+RUN mkdir -p /app/build/standalone
+RUN cp next-i18next.config.js /app/build/standalone/
+
 RUN npm install
 RUN npm install --save ./commons/ts
 RUN npm run build
+
 # Workaround for these bugs:
 # https://github.com/vercel/next.js/issues/51684
 # https://github.com/tiredofit/docker-collabora-online/pull/28
@@ -24,6 +30,7 @@ ENV NODE_ENV=production
 ENV PORT=3000
 WORKDIR /app
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/next-i18next.config.js ./
 COPY --from=builder --chown=65532:65532 /app/build/standalone ./
 COPY --from=builder --chown=65532:65532 /app/build/static ./build/static
 EXPOSE 3000
